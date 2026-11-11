@@ -1,0 +1,75 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "windows-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "cl.exe"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "architecture": {
+        "value": "x86",
+        "strategy": "external"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug (x86)",
+      "inherits": "windows-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "vendor": {
+        "$comment": "CLion does not inherit vendor maps from base presets, so this block is repeated per concrete preset.",
+        "jetbrains.com/clion": {
+          "toolchain": "msvc-x86"
+        }
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release (x86)",
+      "inherits": "windows-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "vendor": {
+        "$comment": "CLion does not inherit vendor maps from base presets, so this block is repeated per concrete preset.",
+        "jetbrains.com/clion": {
+          "toolchain": "msvc-x86"
+        }
+      }
+    },
+    {
+      "name": "rider-debug",
+      "displayName": "Rider Debug (x86)",
+      "description": "The IDE's own build tree, so it never shares one with a command-line build.",
+      "inherits": "debug",
+      "vendor": {
+        "$comment": "CLion does not inherit vendor maps from base presets, so this block is repeated per concrete preset.",
+        "jetbrains.com/clion": {
+          "toolchain": "msvc-x86"
+        }
+      }
+    },
+    {
+      "name": "rider-release",
+      "displayName": "Rider Release (x86)",
+      "description": "The IDE's own build tree, so it never shares one with a command-line build.",
+      "inherits": "release",
+      "vendor": {
+        "$comment": "CLion does not inherit vendor maps from base presets, so this block is repeated per concrete preset.",
+        "jetbrains.com/clion": {
+          "toolchain": "msvc-x86"
+        }
+      }
+    }
+  ]
+}

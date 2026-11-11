@@ -1,0 +1,76 @@
+{
+  "project": {
+    "baseProductId": "",
+    "clientId": "",
+    "clientSecret": "",
+    "version": "1.0",
+    "installDirectory": "My Game",
+    "name": "My Game",
+    "platform": "windows",
+    "scriptInterpreter": true,
+    "dependencies": [],
+    "products": [
+      {
+        "name": "My Game",
+        "productId": "",
+        "depots": [
+          {
+            "name": "Common",
+            "folder": "C:\\path\\to\\game\\files"
+          }
+        ],
+        "setupSteps": [
+          {
+            "name": "DirectPlay",
+            "install": {
+              "action": "Execute",
+              "arguments": {
+                "executable": "{app}\\dpsetup\\dpsetup.exe",
+                "workingDir": "{app}\\dpsetup",
+                "runAsAdmin": true,
+                "arguments": "",
+                "conditions": [
+                  "onlyOnce"
+                ]
+              }
+            }
+          },
+          {
+            "name": "Firewall exception",
+            "install": {
+              "action": "Execute",
+              "arguments": {
+                "executable": "{app}\\firewall.cmd",
+                "workingDir": "{app}",
+                "runAsAdmin": true,
+                "arguments": "add \"{app}\\game.exe\"",
+                "conditions": [
+                  "onlyOnce"
+                ]
+              }
+            },
+            "uninstall": {
+              "action": "Execute",
+              "arguments": {
+                "executable": "{app}\\firewall.cmd",
+                "workingDir": "{app}",
+                "runAsAdmin": true,
+                "arguments": "delete \"{app}\\game.exe\""
+              }
+            }
+          }
+        ],
+        "tasks": [
+          {
+            "type": "FileTask",
+            "name": "My Game",
+            "category": "game",
+            "path": "game.exe",
+            "isPrimary": true
+          }
+        ],
+        "supportDepots": []
+      }
+    ]
+  }
+}

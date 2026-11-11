@@ -1,0 +1,32 @@
+#pragma code_page(65001) // UTF-8
+#include "metarc.h"
+
+VS_VERSION_INFO VERSIONINFO
+    FILEVERSION     PROJECT_VERSIONINFO_FILEVERSION
+    PRODUCTVERSION  PROJECT_VERSIONINFO_PRODUCTVERSION
+    FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+    FILEFLAGS       PROJECT_VERSIONINFO_FILEFLAGS
+    FILEOS          VOS_NT_WINDOWS32
+    FILETYPE        VFT_APP
+    FILESUBTYPE     VFT_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName",        PROJECT_AUTHOR
+            VALUE "LegalCopyright",     PROJECT_COPYRIGHT
+            VALUE "ProductName",        PROJECT_NAME
+            VALUE "ProductVersion",     PROJECT_VERSION
+            VALUE "Comments",           PROJECT_NOTICE
+            VALUE "FileVersion",        PROJECT_VERSION
+            VALUE "FileDescription",    DPSETUP_DESCRIPTION
+            VALUE "InternalName",       DPSETUP_MODULE
+            VALUE "OriginalFilename",   DPSETUP_MODULE ".exe"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 0x04B0
+    END
+END

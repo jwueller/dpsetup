@@ -1,0 +1,7 @@
+/out/
+.idea/
+*.DotSettings.user
+CMakeUserPresets.json
+.vs/
+.claude/settings.local.json
+*.log

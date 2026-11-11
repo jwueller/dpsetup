@@ -1,0 +1,53 @@
+// An example Steam install script that sets Microsoft's DirectPlay up at a
+// game's first-time setup. This example assumes a `dpsetup\` redistributable
+// folder beside the game's executable at the install root. Adjust as needed.
+//
+// To use it, include an "InstallScript" section of your depot configuration.
+// Steamworks will sign it during the depot build, and Steam client only runs
+// signed scripts. See: https://partner.steamgames.com/doc/sdk/installscripts
+//
+//     "DepotBuildConfig"
+//     {
+//         "DepotID"   "1001"
+//         "FileMapping"
+//         {
+//             "LocalPath" "common\\*"
+//             "DepotPath" "."
+//             "Recursive" "1"
+//         }
+//
+//         // Note: Relative to "ContentRoot", not "DepotPath".
+//         // Note: Steamworks supports multiple "InstallScript" entries, so you
+//         //  can both merge this one into your own, or keep it separate.
+//         "InstallScript" "common\\dpsetup\\installscript.vdf"
+//     }
+//
+"InstallScript"
+{
+    "Run Process"
+    {
+        "DirectPlay"
+        {
+            "process 1" "%INSTALLDIR%\\dpsetup\\dpsetup.exe"
+
+            // The HasRunKey is app-agnostic on purpose, since DirectPlay setup
+            // is system-wide, not per game, so other games can skip
+            // installation if another one already did it, just like with
+            // Steamworks Common Redistributables.
+            //
+            // See: https://partner.steamgames.com/doc/features/common_redist
+            "HasRunKey" "HKEY_LOCAL_MACHINE\\SOFTWARE\\Valve\\Steam\\Apps\\CommonRedist\\DirectPlay\\1"
+
+            // Other games may still depend on the system-wide DirectPlay
+            // installation, so we can't remove it.
+            "NoCleanUp" "1"
+        }
+    }
+
+    // Lets the game accept DirectPlay connections through Windows Firewall.
+    // The name is what the rule is listed under.
+    "Firewall"
+    {
+        "My Game"   "%INSTALLDIR%\\game.exe"
+    }
+}

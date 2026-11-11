@@ -1,0 +1,4 @@
+# The whole distribution is stored and checked out byte for byte, so a
+# repository that vendors this tree keeps validating against SHA256SUMS.txt
+# regardless of its line-ending settings.
+* -text
