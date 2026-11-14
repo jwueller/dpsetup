@@ -402,7 +402,7 @@ FNFDINOTIFY(FdiNotify)
     if (openStatus != 0)
     {
         LOG(
-            "BCryptOpenAlgorithmProvider(SHA256) -> status 0x{:08X}",
+            "BCryptOpenAlgorithmProvider(SHA256) -> NTSTATUS{{0x{:08X}}}",
             static_cast<unsigned>(openStatus)
         );
 
@@ -422,7 +422,7 @@ FNFDINOTIFY(FdiNotify)
     if (createStatus != 0)
     {
         LOG(
-            "BCryptCreateHash -> status 0x{:08X}",
+            "BCryptCreateHash -> NTSTATUS{{0x{:08X}}}",
             static_cast<unsigned>(createStatus)
         );
 

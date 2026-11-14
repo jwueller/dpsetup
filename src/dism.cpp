@@ -162,7 +162,7 @@ bool EnableDirectPlayFeature(const HMODULE hDismApi)
         if (SUCCEEDED(hr))
         {
             LOG(
-                "{} -> hr 0x{:08X}",
+                "{} -> HRESULT{{0x{:08X}}}",
                 symbol,
                 static_cast<unsigned>(hr)
             );
@@ -175,7 +175,7 @@ bool EnableDirectPlayFeature(const HMODULE hDismApi)
                 ? pMessage->Value
                 : L"";
         LOG(
-            "{} -> error hr 0x{:08X} {}",
+            "{} -> failed HRESULT{{0x{:08X}}} {}",
             symbol,
             static_cast<unsigned>(hr),
             Utf8FromWide(message)

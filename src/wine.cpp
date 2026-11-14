@@ -179,7 +179,7 @@ void ApplyWineDllOverrides()
     if (lStatus != ERROR_SUCCESS)
     {
         LOG(
-            "RegCreateKeyExW('HKCU\\{}') -> hr 0x{:08X}",
+            "RegCreateKeyExW('HKCU\\{}') -> HRESULT{{0x{:08X}}}",
             Utf8FromWide(lpSubKey),
             static_cast<unsigned>(HRESULT_FROM_WIN32(lStatus))
         );
