@@ -39,7 +39,7 @@ However, failure to log is non-fatal, and does not affect normal operation.
 
 ## Distribution
 
-Ship the entire contents of `redistributable/` with the game, in a `dpsetup/` subfolder beside the game's executable. The examples assume that folder, but any other works: `dpsetup.exe` only expects a known `dxnt.cab` in the same folder (_not_ in the working directory).
+Ship the entire contents of `redistributable/` with the game, for example in a `dpsetup/` subfolder beside the game's executable. The examples assume that folder, but any other works: `dpsetup.exe` only expects a known `dxnt.cab` in the same folder (_not_ in the working directory).
 
 - `redistributable/dpfirewall.cmd` adds or removes the Windows Firewall rule for a game. The GOG project file runs it; Steam has a firewall section of its own.
 - `examples/installscript.vdf` is a Steamworks install script that runs install mode once per machine (per prefix under Wine/Proton). The comments explain how to adapt it.
@@ -111,7 +111,7 @@ echo %errorlevel%
 ```
 
 ```powershell
-# Note: `-ArgumentList` values must be quited, since they get concatenated
+# Note: `-ArgumentList` values must be quoted, since they get concatenated
 #  into a single string before being passed to the executable.
 (Start-Process dpsetup.exe -ArgumentList '"path\to\extract\to"' -Wait -PassThru).ExitCode
 ```
