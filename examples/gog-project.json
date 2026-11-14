@@ -40,10 +40,10 @@
             "install": {
               "action": "Execute",
               "arguments": {
-                "executable": "{app}\\firewall.cmd",
+                "executable": "{app}\\dpfirewall.cmd",
                 "workingDir": "{app}",
                 "runAsAdmin": true,
-                "arguments": "add \"{app}\\game.exe\"",
+                "arguments": "allow \"{app}\\game.exe\"",
                 "conditions": [
                   "onlyOnce"
                 ]
@@ -52,10 +52,10 @@
             "uninstall": {
               "action": "Execute",
               "arguments": {
-                "executable": "{app}\\firewall.cmd",
+                "executable": "{app}\\dpfirewall.cmd",
                 "workingDir": "{app}",
                 "runAsAdmin": true,
-                "arguments": "delete \"{app}\\game.exe\""
+                "arguments": "revoke \"{app}\\game.exe\""
               }
             }
           }

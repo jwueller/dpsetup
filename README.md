@@ -43,7 +43,7 @@ Ship the entire contents of `redistributable/` with the game. Many games choose 
 
 - `examples/installscript.vdf` is a Steamworks install script that runs install mode once per machine (per prefix under Wine/Proton). The comments explain how to adapt it.
 - `examples/gog-project.json` is a partial GOG Galaxy project file that mirrors the Steamworks install script.
-- `examples/firewall.cmd` adds or removes the Windows Firewall rule for a game. The GOG project file runs it; Steam has a firewall section of its own.
+- `examples/dpfirewall.cmd` adds or removes the Windows Firewall rule for a game. The GOG project file runs it; Steam has a firewall section of its own.
 - `symbols/` holds `dpsetup.pdb`, the debug symbols of `dpsetup.exe` for reading crash dumps. It is not required to ship with a game.
 
 `SHA256SUMS.txt` covers every file of a release. Use `sha256sum -c SHA256SUMS.txt` or equivalent to verify.
