@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Makes a game create its DirectPlay COM objects from a copy extracted beside
+  its executable (`dpsetup.exe <game folder>`) instead of the one installed on
+  the machine.
+
+  Name this file after the game executable plus ".manifest" (Game.exe.manifest)
+  and place it beside that executable. Windows ignores it when the executable
+  has a manifest embedded; merge the elements below into that one instead.
+
+  Only class creation is redirected. DirectPlay still reads its service
+  provider list from the registry of the machine, which exists only where
+  DirectPlay is installed.
+-->
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <!-- Names the game; replace it. Windows matches nothing against it. -->
+  <assemblyIdentity type="win32" name="ExampleCompany.ExampleGame" version="1.0.0.0" processorArchitecture="x86"/>
+
+  <!-- DirectPlay 4 and earlier -->
+  <file name="dplayx.dll">
+    <comClass clsid="{D1EB6D20-8923-11D0-9D97-00A0C90A43CB}" threadingModel="Both" description="DirectPlay Object"/>
+    <comClass clsid="{2FE8F810-B2A5-11D0-A787-0000F803ABFC}" threadingModel="Both" description="DirectPlayLobby Object"/>
+  </file>
+
+  <!-- DirectPlay 8 -->
+  <file name="dpnet.dll">
+    <comClass clsid="{286F484D-375E-4458-A272-B138E2F80A6A}" threadingModel="Both" description="DirectPlay8Peer Object"/>
+    <comClass clsid="{743F1DC6-5ABA-429F-8BDF-C54D03253DC2}" threadingModel="Both" description="DirectPlay8Client Object"/>
+    <comClass clsid="{DA825E1B-6830-43D7-835D-0B5AD82956A2}" threadingModel="Both" description="DirectPlay8Server Object"/>
+    <comClass clsid="{934A9523-A3CA-4BC5-ADA0-D6D95D979421}" threadingModel="Both" description="DirectPlay8Address Object"/>
+    <comClass clsid="{3B2B6775-70B6-45AF-8DEA-A209C69559F3}" threadingModel="Both" description="DirectPlay8LobbyClient Object"/>
+    <comClass clsid="{667955AD-6B3B-43CA-B949-BC69B5BAFF7F}" threadingModel="Both" description="DirectPlay8LobbiedApplication Object"/>
+    <comClass clsid="{FC47060E-6153-4B34-B975-8E4121EB7F3C}" threadingModel="Both" description="DirectPlay8 Thread Pool Object"/>
+    <comClass clsid="{E4C1D9A2-CBF7-48BD-9A69-34A55E0D8941}" threadingModel="Both" description="DirectPlay8 NAT Resolver Object"/>
+    <comClass clsid="{F975AF2C-9A51-4AF0-91EA-06038698CE38}" threadingModel="Both" description="DirectPlay8 Diagnostics Object"/>
+    <comClass clsid="{EBFE7BA0-628D-11D2-AE0F-006097B01411}" threadingModel="Both" description="DirectPlay8 WSock TCPIP Provider Object"/>
+    <comClass clsid="{53934290-628D-11D2-AE0F-006097B01411}" threadingModel="Both" description="DirectPlay8 WSock IPX Provider Object"/>
+    <comClass clsid="{6D4A3650-628D-11D2-AE0F-006097B01411}" threadingModel="Both" description="DirectPlay8 Modem Provider Object"/>
+    <comClass clsid="{743B5D60-628D-11D2-AE0F-006097B01411}" threadingModel="Both" description="DirectPlay8 Serial Provider Object"/>
+  </file>
+
+  <!-- DirectPlay 8 NAT traversal, created by dpnet.dll -->
+  <file name="dpnhupnp.dll">
+    <comClass clsid="{B9C2E9C4-68C1-4D42-A7A1-E76A26982AD6}" threadingModel="Both" description="DirectPlay NAT Helper UPnP"/>
+  </file>
+  <file name="dpnhpast.dll">
+    <comClass clsid="{963AB779-16A1-477C-A36D-CB5E711938F7}" threadingModel="Both" description="DirectPlay NAT Helper PAST"/>
+  </file>
+</assembly>
