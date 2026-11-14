@@ -61,10 +61,9 @@ tree is signed.
 - `src/dpsetup.exe.manifest` -- `asInvoker` and the supported OS range.
 - The other files of `src/` are small helpers the four sources share.
 - `redistributable/` -- what a game ships beside the exe:
-  Microsoft's files, byte for byte.
+  Microsoft's files, byte for byte, and the firewall script.
 - `examples/` -- what a developer copies into a build and adapts: the
-  Steam install script, its GOG counterpart and the firewall script that
-  one runs.
+  Steam install script, its GOG counterpart and the game manifest.
 - `cmake/` -- what the distribution step needs: the checksum script and the
   `.gitattributes` that ships at the distribution's root.
 

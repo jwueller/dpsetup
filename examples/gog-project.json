@@ -40,8 +40,8 @@
             "install": {
               "action": "Execute",
               "arguments": {
-                "executable": "{app}\\dpfirewall.cmd",
-                "workingDir": "{app}",
+                "executable": "{app}\\dpsetup\\dpfirewall.cmd",
+                "workingDir": "{app}\\dpsetup",
                 "runAsAdmin": true,
                 "arguments": "allow \"{app}\\game.exe\"",
                 "conditions": [
@@ -52,8 +52,8 @@
             "uninstall": {
               "action": "Execute",
               "arguments": {
-                "executable": "{app}\\dpfirewall.cmd",
-                "workingDir": "{app}",
+                "executable": "{app}\\dpsetup\\dpfirewall.cmd",
+                "workingDir": "{app}\\dpsetup",
                 "runAsAdmin": true,
                 "arguments": "revoke \"{app}\\game.exe\""
               }

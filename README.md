@@ -39,11 +39,11 @@ However, failure to log is non-fatal, and does not affect normal operation.
 
 ## Distribution
 
-Ship the entire contents of `redistributable/` with the game. Many games choose to ship redistributable files in a dedicated subfolder like `dpsetup/` or `directx/`. `dpsetup.exe` only expects a known `dxnt.cab` in the same folder (_not_ in the working directory).
+Ship the entire contents of `redistributable/` with the game, in a `dpsetup/` subfolder beside the game's executable. The examples assume that folder, but any other works: `dpsetup.exe` only expects a known `dxnt.cab` in the same folder (_not_ in the working directory).
 
+- `redistributable/dpfirewall.cmd` adds or removes the Windows Firewall rule for a game. The GOG project file runs it; Steam has a firewall section of its own.
 - `examples/installscript.vdf` is a Steamworks install script that runs install mode once per machine (per prefix under Wine/Proton). The comments explain how to adapt it.
 - `examples/gog-project.json` is a partial GOG Galaxy project file that mirrors the Steamworks install script.
-- `examples/dpfirewall.cmd` adds or removes the Windows Firewall rule for a game. The GOG project file runs it; Steam has a firewall section of its own.
 - `examples/game.exe.manifest` makes a game create its _DirectPlay_ COM objects from a copy extracted beside its executable instead of the installed one.
 - `symbols/` holds `dpsetup.pdb`, the debug symbols of `dpsetup.exe` for reading crash dumps. It is not required to ship with a game.
 
