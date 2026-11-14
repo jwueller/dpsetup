@@ -21,8 +21,6 @@
 
 #include "steps.h"
 
-namespace Retrofit::Setup
-{
 namespace
 {
 /**
@@ -274,4 +272,3 @@ void RegisterWineComServers(const std::wstring& destDir)
         }
     }
 }
-} // namespace Retrofit::Setup

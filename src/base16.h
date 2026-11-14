@@ -5,8 +5,6 @@
 #include <span>
 #include <string>
 
-namespace Retrofit
-{
 //
 // RFC 4648 data encoding utilities -- without external dependencies
 //
@@ -46,4 +44,3 @@ constexpr OutIt Base16EncodeTo(
     Base16EncodeTo(bytes, std::back_inserter(encoded), bUpper);
     return encoded;
 }
-} // namespace Retrofit

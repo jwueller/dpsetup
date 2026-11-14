@@ -4,8 +4,6 @@
 #include <string_view>
 #include <type_traits>
 
-namespace Retrofit
-{
 template <typename T>
 concept CharLike =
     std::is_same_v<const T, const char> ||
@@ -40,4 +38,3 @@ template <CharLike CharT>
         }
     );
 }
-} // namespace Retrofit

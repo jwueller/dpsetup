@@ -15,8 +15,6 @@
 #include <string_view>
 #include <type_traits>
 
-namespace Retrofit
-{
 /// What a string's bytes mean. A @ref std::string does not say which of
 /// the two narrow encodings it holds, so a conversion names it.
 ///
@@ -395,4 +393,3 @@ template <Encoding To, Encoding From>
 [[nodiscard]] inline std::wstring WideFromUtf8(const std::string_view in) { return EncodedFrom<Encoding::Wide, Encoding::Utf8>(in); }
 [[nodiscard]] inline std::string Utf8FromWide(const std::wstring_view in) { return EncodedFrom<Encoding::Utf8, Encoding::Wide>(in); }
 // @formatter:on
-} // namespace Retrofit

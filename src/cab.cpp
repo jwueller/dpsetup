@@ -31,8 +31,6 @@
 
 #include "steps.h"
 
-namespace Retrofit::Setup
-{
 namespace
 {
 /**
@@ -686,4 +684,3 @@ bool VerifyExtractedFiles(const std::wstring& destDir)
     );
     return true;
 }
-} // namespace Retrofit::Setup

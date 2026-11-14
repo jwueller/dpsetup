@@ -9,8 +9,6 @@
 #include <limits>
 #include <utility>
 
-namespace Retrofit
-{
 template <std::integral OutT, std::integral InT>
 constexpr OutT saturate_cast(const InT input) noexcept
 {
@@ -37,4 +35,3 @@ constexpr OutT assert_in_range(const InT input) noexcept
 
     return saturate_cast<OutT>(input);
 }
-} // namespace Retrofit

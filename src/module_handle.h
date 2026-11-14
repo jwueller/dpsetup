@@ -9,8 +9,6 @@
 #include <string>
 #include <type_traits>
 
-namespace Retrofit
-{
 /**
  * @brief An export typed as @p Pfn. @ref FARPROC is `INT_PTR (WINAPI*)()` only
  *  so that every export fits one return type; a direct function-to-function
@@ -38,7 +36,7 @@ template <typename Pfn>
  * but does not define is fine.
  */
 #define PROC_ADDRESS_OF(hModule, symbol) \
-    Retrofit::ProcAddressAs<decltype(&(symbol))>((hModule), (SYMBOL(symbol)))
+    ::ProcAddressAs<decltype(&(symbol))>((hModule), (SYMBOL(symbol)))
 
 /// Full path of @p hModule (null: the executable), however long: the buffer
 ///  grows until the answer fits, up to the 32768 characters a path can have.
@@ -67,4 +65,3 @@ template <typename Pfn>
         path.resize(std::min(cchBuffer * 2, cchMax));
     }
 }
-} // namespace Retrofit

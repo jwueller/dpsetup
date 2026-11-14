@@ -8,8 +8,6 @@
 #include <string>
 #include <string_view>
 
-namespace Retrofit::Setup
-{
 /// Opens @p path for appending, replacing a log already open, and attaches to
 /// the parent console if there is one. Returns false when the file cannot be
 /// opened; records then go to the console only.
@@ -27,10 +25,9 @@ void LogWrite(std::string_view message) noexcept;
     {                                                                        \
         try                                                                  \
         {                                                                    \
-            ::Retrofit::Setup::LogWrite(std::format(__VA_ARGS__));           \
+            ::LogWrite(std::format(__VA_ARGS__));                            \
         }                                                                    \
         catch (...)                                                          \
         {                                                                    \
         }                                                                    \
     } while (false)
-} // namespace Retrofit::Setup

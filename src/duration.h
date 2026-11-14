@@ -4,8 +4,6 @@
 
 #include <chrono>
 
-namespace Retrofit
-{
 using namespace std::literals::chrono_literals;
 
 /**
@@ -20,4 +18,3 @@ using namespace std::literals::chrono_literals;
 {
     return saturate_cast<unsigned long>(duration.count());
 }
-} // namespace Retrofit

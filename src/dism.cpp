@@ -14,8 +14,6 @@
 
 #include "steps.h"
 
-namespace Retrofit::Setup
-{
 namespace
 {
 // The Windows SDK has no dismapi.h (the ADK does), so the slice used here is
@@ -243,4 +241,3 @@ bool EnableDirectPlayFeature(const HMODULE hDismApi)
     (void)pfnDismShutdown();
     return enabled;
 }
-} // namespace Retrofit::Setup

@@ -5,8 +5,6 @@
 #include <type_traits>
 #include <utility>
 
-namespace Retrofit
-{
 /**
  * @brief Sole owner of one Win32 resource, released with @p fnClose.
  *
@@ -103,4 +101,3 @@ struct UniqueProcessInformation
     {
     }
 };
-} // namespace Retrofit

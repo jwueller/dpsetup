@@ -6,8 +6,6 @@
 
 #include "encoding.h"
 
-namespace Retrofit::Setup
-{
 namespace
 {
 HANDLE g_hLog = INVALID_HANDLE_VALUE;
@@ -105,4 +103,3 @@ void LogWrite(const std::string_view message) noexcept
         // A record that cannot be built is dropped; logging never affects the caller.
     }
 }
-} // namespace Retrofit::Setup

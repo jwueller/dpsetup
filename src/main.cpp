@@ -41,8 +41,6 @@
 
 #include "steps.h"
 
-namespace Retrofit::Setup
-{
 namespace
 {
 /// Directory containing this executable, without a trailing backslash.
@@ -243,12 +241,8 @@ FARPROC WINAPI LoadDelayedFromSystemDirectory(const unsigned dliNotify, const PD
     return reinterpret_cast<FARPROC>(hModule);
 }
 } // namespace
-} // namespace Retrofit::Setup
 
-extern "C" const PfnDliHook __pfnDliNotifyHook2 = Retrofit::Setup::LoadDelayedFromSystemDirectory;
-
-using namespace Retrofit;
-using namespace Retrofit::Setup;
+extern "C" const PfnDliHook __pfnDliNotifyHook2 = LoadDelayedFromSystemDirectory;
 
 /**
  * @brief Dispatches between install mode (no arguments, @ref RunInstallMode)

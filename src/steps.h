@@ -10,8 +10,6 @@
 
 #include "unique_resource.h"
 
-namespace Retrofit::Setup
-{
 /**
  * @brief The cabinet shipped next to this exe, carrying the DirectPlay
  *  binaries we extract (see @ref kWantedFiles).
@@ -161,4 +159,3 @@ void RegisterWineComServers(const std::wstring& destDir);
  *  restart) afterwards. The enabling call's HRESULT is logged, never trusted.
  */
 bool EnableDirectPlayFeature(HMODULE hDismApi);
-} // namespace Retrofit::Setup
