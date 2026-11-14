@@ -47,40 +47,14 @@ namespace
  *  names in @ref kWantedFiles could otherwise overwrite the system
  *  directory with unverified content.
  */
-constexpr long long kDxntCabSize = 13264168;
-constexpr BYTE kDxntCabSha256[32] = {
-    0x82,
-    0x54,
-    0xBE,
-    0xB9,
-    0x72,
-    0x41,
-    0x39,
-    0xE0,
-    0x15,
-    0x03,
-    0xEC,
-    0x65,
-    0xE7,
-    0x68,
-    0x2D,
-    0xA5,
-    0x93,
-    0xCC,
-    0x4E,
-    0x81,
-    0xEC,
-    0x4B,
-    0xFF,
-    0x43,
-    0x1E,
-    0x5F,
-    0xD3,
-    0x7C,
-    0xE5,
-    0x65,
-    0x60,
-    0x34,
+constexpr long long kDxntCabExpectedSize = 13264168;
+constexpr BYTE kDxntCabExpectedSha256[32] = {
+    // @formatter:off
+    0x82, 0x54, 0xBE, 0xB9, 0x72, 0x41, 0x39, 0xE0,
+    0x15, 0x03, 0xEC, 0x65, 0xE7, 0x68, 0x2D, 0xA5,
+    0x93, 0xCC, 0x4E, 0x81, 0xEC, 0x4B, 0xFF, 0x43,
+    0x1E, 0x5F, 0xD3, 0x7C, 0xE5, 0x65, 0x60, 0x34,
+    // @formatter:on
 };
 
 /**
@@ -408,13 +382,13 @@ FNFDINOTIFY(FdiNotify)
  */
 [[nodiscard]] bool VerifyDxntCabIntegrity(const HANDLE hCab, const long long fileSize)
 {
-    if (fileSize != kDxntCabSize)
+    if (fileSize != kDxntCabExpectedSize)
     {
         LOG(
             "VerifyDxntCabIntegrity('{}'): size mismatch, {} bytes, expected {}",
             kDxntCabName,
             fileSize,
-            kDxntCabSize
+            kDxntCabExpectedSize
         );
 
         return false;
@@ -519,10 +493,10 @@ FNFDINOTIFY(FdiNotify)
         return false;
     }
 
-    if (std::memcmp(digest, kDxntCabSha256, sizeof(digest)) != 0)
+    if (std::memcmp(digest, kDxntCabExpectedSha256, sizeof(digest)) != 0)
     {
         const std::string sha256 = Base16FromBytes(digest);
-        const std::string expected = Base16FromBytes(kDxntCabSha256);
+        const std::string expected = Base16FromBytes(kDxntCabExpectedSha256);
         LOG(
             "VerifyDxntCabIntegrity('{}'): SHA-256 mismatch, got {}, expected {}",
             kDxntCabName,
