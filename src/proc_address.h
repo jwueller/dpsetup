@@ -16,7 +16,10 @@
  *  @ref PROC_ADDRESS_OF, which takes the type from the declaration.
  */
 template <typename Pfn>
-    requires std::is_pointer_v<Pfn> && std::is_function_v<std::remove_pointer_t<Pfn>>
+    requires (
+        std::is_pointer_v<Pfn> &&
+        std::is_function_v<std::remove_pointer_t<Pfn>>
+    )
 [[nodiscard]] Pfn ProcAddressAs(
     _In_ const HMODULE hModule,
     _In_z_ const char* const lpszProcName

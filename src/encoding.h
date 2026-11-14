@@ -25,19 +25,19 @@
         3 * in.size(),
         [&](char* const lpOut, const std::size_t cbOut) noexcept
         {
-            const int cbConverted =
-                in.empty()
-                    ? 0
-                    : WideCharToMultiByte(
-                        CP_UTF8,
-                        0,
-                        in.data(),
-                        assert_in_range<int>(in.size()),
-                        lpOut,
-                        saturate_cast<int>(cbOut),
-                        nullptr,
-                        nullptr
-                    );
+            if (in.empty())
+                return std::size_t{0};
+
+            const int cbConverted = WideCharToMultiByte(
+                CP_UTF8,
+                0,
+                in.data(),
+                assert_in_range<int>(in.size()),
+                lpOut,
+                saturate_cast<int>(cbOut),
+                nullptr,
+                nullptr
+            );
             return static_cast<std::size_t>(cbConverted);
         }
     );
@@ -52,17 +52,17 @@
         in.size(),
         [&](wchar_t* const lpOut, const std::size_t cchOut) noexcept
         {
-            const int cchConverted =
-                in.empty()
-                    ? 0
-                    : MultiByteToWideChar(
-                        CP_UTF8,
-                        0,
-                        in.data(),
-                        assert_in_range<int>(in.size()),
-                        lpOut,
-                        saturate_cast<int>(cchOut)
-                    );
+            if (in.empty())
+                return std::size_t{0};
+
+            const int cchConverted = MultiByteToWideChar(
+                CP_UTF8,
+                0,
+                in.data(),
+                assert_in_range<int>(in.size()),
+                lpOut,
+                saturate_cast<int>(cchOut)
+            );
             return static_cast<std::size_t>(cchConverted);
         }
     );

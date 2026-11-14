@@ -29,7 +29,10 @@ enum class ExtractResult : std::uint8_t
 
 /// Verifies `dxnt.cab` next to this exe, then extracts `kDxntCabPayload`
 /// from it into @p destDir.
-[[nodiscard]] ExtractResult ExtractDirectPlayFiles(const std::wstring& exeDir, const std::wstring& destDir);
+[[nodiscard]] ExtractResult ExtractDirectPlayFiles(
+    const std::wstring& exeDir,
+    const std::wstring& destDir
+);
 
 /**
  * @brief The first Win32 error the last @ref ExtractDirectPlayFiles hit

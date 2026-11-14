@@ -22,7 +22,9 @@ namespace
 /// The whole milliseconds a Win32 timeout parameter (a `DWORD`) takes. A
 /// coarser unit converts implicitly; a finer one needs an explicit
 /// `duration_cast` at the call, where the truncation is visible.
-[[nodiscard]] constexpr DWORD MillisecondsFrom(const std::chrono::milliseconds duration) noexcept
+[[nodiscard]] constexpr DWORD MillisecondsFrom(
+    const std::chrono::milliseconds duration
+) noexcept
 {
     return saturate_cast<DWORD>(duration.count());
 }
@@ -62,9 +64,9 @@ using GetUnixFileNameFn = char* (__cdecl*)(LPCWSTR);
 [[nodiscard]] GetUnixFileNameFn ResolveGetUnixFileName() noexcept
 {
     const HMODULE hK32 = GetModuleHandleW(L"kernel32.dll");
-    return hK32
-               ? ProcAddressAs<GetUnixFileNameFn>(hK32, "wine_get_unix_file_name")
-               : nullptr;
+    if (!hK32)
+        return nullptr;
+    return ProcAddressAs<GetUnixFileNameFn>(hK32, "wine_get_unix_file_name");
 }
 } // namespace
 
@@ -82,7 +84,8 @@ bool UnixRemoveEntry(const std::wstring& dir, const std::wstring& fileName)
     char* unixDir = pGetUnixName(dir.c_str());
     if (!unixDir)
         return false;
-    const std::string unixPath = std::string(unixDir) + "/" + Utf8FromWide(std::wstring_view{fileName});
+    const std::string unixPath =
+        std::string(unixDir) + "/" + Utf8FromWide(fileName);
     HeapFree(GetProcessHeap(), 0, unixDir);
 
     WCHAR sysDir[MAX_PATH];
@@ -92,15 +95,15 @@ bool UnixRemoveEntry(const std::wstring& dir, const std::wstring& fileName)
 
     // Wine runs a native Unix program via start.exe /unix.
     const std::wstring startExe = std::wstring(sysDir, n) + L"\\start.exe";
-    const std::wstring cmd =
-        L"\"" + startExe + L"\" /unix /bin/rm -f \"" + WideFromUtf8(std::string_view{unixPath}) + L"\"";
+    const std::wstring cmd = L"\"" + startExe + L"\" /unix /bin/rm -f \""
+        + WideFromUtf8(unixPath) + L"\"";
     std::vector cmdBuf(cmd.begin(), cmd.end());
     cmdBuf.push_back(L'\0'); // CreateProcessW's lpCommandLine must be writable
 
     STARTUPINFOW si{};
     si.cb = sizeof(si);
     PROCESS_INFORMATION pi{};
-    if (!CreateProcessW(
+    const BOOL created = CreateProcessW(
         startExe.c_str(),
         cmdBuf.data(),
         nullptr,
@@ -111,14 +114,11 @@ bool UnixRemoveEntry(const std::wstring& dir, const std::wstring& fileName)
         nullptr,
         &si,
         &pi
-    ))
+    );
+    if (!created)
     {
         const DWORD error = GetLastError();
-        LOG(
-            "CreateProcessW('{}') -> error {}",
-            Utf8FromWide(startExe),
-            error
-        );
+        LOG("CreateProcessW({:?}) -> error {}", Utf8FromWide(startExe), error);
         return false;
     }
     {
@@ -135,18 +135,12 @@ bool UnixRemoveEntry(const std::wstring& dir, const std::wstring& fileName)
     {
         if (GetFileAttributesW(dosPath.c_str()) == INVALID_FILE_ATTRIBUTES)
         {
-            LOG(
-                "UnixRemoveEntry('{}') -> ok",
-                unixPath
-            );
+            LOG("UnixRemoveEntry({:?}) -> ok", unixPath);
             return true;
         }
         Sleep(MillisecondsFrom(20ms));
     }
-    LOG(
-        "UnixRemoveEntry('{}') -> still present after unlink",
-        unixPath
-    );
+    LOG("UnixRemoveEntry({:?}) -> still present after unlink", unixPath);
     return false;
 }
 
@@ -170,7 +164,7 @@ void ApplyWineDllOverrides()
     if (lStatus != ERROR_SUCCESS)
     {
         LOG(
-            "RegCreateKeyExW('HKCU\\{}') -> HRESULT{{0x{:08X}}}",
+            "RegCreateKeyExW(HKCU, {:?}) -> HRESULT{{0x{:08X}}}",
             Utf8FromWide(lpSubKey),
             static_cast<unsigned>(HRESULT_FROM_WIN32(lStatus))
         );
@@ -181,14 +175,15 @@ void ApplyWineDllOverrides()
     int written = 0;
     for (const auto name : kDllOverrideNames)
     {
-        if (RegSetValueExW(
+        const LSTATUS setStatus = RegSetValueExW(
             key.Get(),
             name,
             0,
             REG_SZ,
             reinterpret_cast<const BYTE*>(kOverrideValue),
             sizeof(kOverrideValue)
-        ) == ERROR_SUCCESS)
+        );
+        if (setStatus == ERROR_SUCCESS)
             ++written;
     }
 
@@ -198,12 +193,8 @@ void ApplyWineDllOverrides()
     RegFlushKey(key.Get());
     key.Reset();
 
-    const auto cOverrides = std::size(kDllOverrideNames);
-    LOG(
-        "ApplyWineDllOverrides -> {} of {} set",
-        written,
-        cOverrides
-    );
+    constexpr auto cOverrides = std::size(kDllOverrideNames);
+    LOG("ApplyWineDllOverrides -> {} of {} set", written, cOverrides);
 }
 
 /// In-process @ref DllRegisterServer works because this exe and the
@@ -216,31 +207,29 @@ void RegisterWineComServers(const std::wstring& destDir)
     for (const auto dll : kComRegisterDlls)
     {
         const std::wstring fullPath = destDir + L"\\" + dll;
-        const UniqueModule library(
-            LoadLibraryExW(
-                fullPath.c_str(),
-                nullptr,
-                LOAD_WITH_ALTERED_SEARCH_PATH
-            )
+        const HMODULE hLibrary = LoadLibraryExW(
+            fullPath.c_str(),
+            nullptr,
+            LOAD_WITH_ALTERED_SEARCH_PATH
         );
+        const UniqueModule library(hLibrary);
         if (!library)
         {
             LOG(
-                "LoadLibraryExW('{}') -> error {}",
+                "LoadLibraryExW({:?}) -> error {}",
                 Utf8FromWide(fullPath),
                 GetLastError()
             );
             continue;
         }
 
-        if (const auto pDllRegisterServer = PROC_ADDRESS_OF(
-            library.Get(),
-            DllRegisterServer
-        ))
+        const auto pDllRegisterServer =
+            PROC_ADDRESS_OF(library.Get(), DllRegisterServer);
+        if (pDllRegisterServer)
         {
             const HRESULT hr = pDllRegisterServer();
             LOG(
-                "DllRegisterServer('{}') -> {} HRESULT{{0x{:08X}}}",
+                "DllRegisterServer({:?}) -> {} HRESULT{{0x{:08X}}}",
                 Utf8FromWide(dll),
                 SUCCEEDED(hr) ? "ok" : "failed",
                 static_cast<unsigned>(hr)
@@ -249,7 +238,7 @@ void RegisterWineComServers(const std::wstring& destDir)
         else
         {
             LOG(
-                "GetProcAddress('{}') -> exports no DllRegisterServer",
+                "GetProcAddress({:?}) -> exports no DllRegisterServer",
                 Utf8FromWide(dll)
             );
         }

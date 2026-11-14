@@ -54,12 +54,29 @@ struct DismString
 };
 #pragma pack(pop)
 
-using DISM_PROGRESS_CALLBACK = void(CALLBACK*)(UINT Current, UINT Total, PVOID UserData);
+using DISM_PROGRESS_CALLBACK = void(CALLBACK*)(
+    UINT Current,
+    UINT Total,
+    PVOID UserData
+);
 
-HRESULT WINAPI DismInitialize(DismLogLevel LogLevel, PCWSTR LogFilePath, PCWSTR ScratchDirectory);
+HRESULT WINAPI DismInitialize(
+    DismLogLevel LogLevel,
+    PCWSTR LogFilePath,
+    PCWSTR ScratchDirectory
+);
+
 HRESULT WINAPI DismShutdown();
-HRESULT WINAPI DismOpenSession(PCWSTR ImagePath, PCWSTR WindowsDirectory, PCWSTR SystemDrive, DismSession* Session);
+
+HRESULT WINAPI DismOpenSession(
+    PCWSTR ImagePath,
+    PCWSTR WindowsDirectory,
+    PCWSTR SystemDrive,
+    DismSession* Session
+);
+
 HRESULT WINAPI DismCloseSession(DismSession Session);
+
 HRESULT WINAPI DismEnableFeature(
     DismSession Session,
     PCWSTR FeatureName,
@@ -73,6 +90,7 @@ HRESULT WINAPI DismEnableFeature(
     DISM_PROGRESS_CALLBACK Progress,
     PVOID UserData
 );
+
 HRESULT WINAPI DismGetFeatureInfo(
     DismSession Session,
     PCWSTR FeatureName,
@@ -80,13 +98,18 @@ HRESULT WINAPI DismGetFeatureInfo(
     DismPackageIdentifier PackageIdentifier,
     DismFeatureInfo** FeatureInfo
 );
+
 HRESULT WINAPI DismGetLastErrorMessage(DismString** ErrorMessage);
+
 HRESULT WINAPI DismDelete(VOID* DismStructure);
 
 /// `DISM_ONLINE_IMAGE`: the running Windows installation.
-inline constexpr auto kDismOnlineImage = L"DISM_{53BFAE52-B167-4E2F-A258-0A37B57FF845}";
+inline constexpr auto kDismOnlineImage =
+    L"DISM_{53BFAE52-B167-4E2F-A258-0A37B57FF845}";
 
-constexpr LPCSTR NameFromFeatureState(const DismPackageFeatureState state) noexcept
+constexpr LPCSTR NameFromFeatureState(
+    const DismPackageFeatureState state
+) noexcept
 {
     switch (state)
     {
@@ -114,20 +137,23 @@ constexpr LPCSTR NameFromFeatureState(const DismPackageFeatureState state) noexc
 
 UniqueModule LoadDismApi()
 {
-    UniqueModule dismApi(LoadLibraryExW(L"dismapi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32));
+    UniqueModule dismApi(
+        LoadLibraryExW(L"dismapi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32)
+    );
     if (dismApi)
     {
-        LOG("LoadLibraryExW('dismapi.dll') -> ok");
+        LOG("LoadLibraryExW(\"dismapi.dll\") -> ok");
     }
     else
     {
-        LOG("LoadLibraryExW('dismapi.dll') -> error {}", GetLastError());
+        LOG("LoadLibraryExW(\"dismapi.dll\") -> error {}", GetLastError());
     }
     return dismApi;
 }
 
 bool EnableDirectPlayFeature(const HMODULE hDismApi)
 {
+    // @formatter:off
     const auto pfnDismInitialize = PROC_ADDRESS_OF(hDismApi, DismInitialize);
     const auto pfnDismShutdown = PROC_ADDRESS_OF(hDismApi, DismShutdown);
     const auto pfnDismOpenSession = PROC_ADDRESS_OF(hDismApi, DismOpenSession);
@@ -136,6 +162,8 @@ bool EnableDirectPlayFeature(const HMODULE hDismApi)
     const auto pfnDismGetFeatureInfo = PROC_ADDRESS_OF(hDismApi, DismGetFeatureInfo);
     const auto pfnDismGetLastErrorMessage = PROC_ADDRESS_OF(hDismApi, DismGetLastErrorMessage);
     const auto pfnDismDelete = PROC_ADDRESS_OF(hDismApi, DismDelete);
+    // @formatter:on
+
     if (
         !pfnDismInitialize ||
         !pfnDismShutdown ||
@@ -147,14 +175,13 @@ bool EnableDirectPlayFeature(const HMODULE hDismApi)
         !pfnDismDelete
     )
     {
-        LOG(
-            "GetProcAddress -> dismapi.dll lacks a DISM API export"
-        );
+        LOG("GetProcAddress -> dismapi.dll lacks a DISM API export");
         return false;
     }
 
     // DISM keeps the reason for a failure apart from its HRESULT.
-    const auto logDismCall = [&](const LPCSTR symbol, const HRESULT hr) {
+    const auto logDismCall = [&](const LPCSTR symbol, const HRESULT hr)
+    {
         if (SUCCEEDED(hr))
         {
             LOG(
@@ -166,16 +193,18 @@ bool EnableDirectPlayFeature(const HMODULE hDismApi)
         }
 
         DismString* pMessage = nullptr;
-        const std::wstring_view message =
-            SUCCEEDED(pfnDismGetLastErrorMessage(&pMessage)) && pMessage && pMessage->Value
-                ? pMessage->Value
-                : L"";
+        const HRESULT hrMessage = pfnDismGetLastErrorMessage(&pMessage);
+        const bool hasMessage =
+            SUCCEEDED(hrMessage) && pMessage && pMessage->Value;
+        const std::wstring_view message = hasMessage ? pMessage->Value : L"";
+
         LOG(
             "{} -> failed HRESULT{{0x{:08X}}} {}",
             symbol,
             static_cast<unsigned>(hr),
             Utf8FromWide(message)
         );
+
         if (pMessage)
             (void)pfnDismDelete(pMessage);
     };
@@ -223,12 +252,10 @@ bool EnableDirectPlayFeature(const HMODULE hDismApi)
         if (SUCCEEDED(hr) && pFeatureInfo)
         {
             const DismPackageFeatureState state = pFeatureInfo->FeatureState;
-            enabled = state == DismStateInstalled || state == DismStateInstallPending;
+            enabled = state == DismStateInstalled
+                || state == DismStateInstallPending;
             const std::string_view featureState = NameFromFeatureState(state);
-            LOG(
-                "DismGetFeatureInfo -> feature state {}",
-                featureState
-            );
+            LOG("DismGetFeatureInfo -> feature state {}", featureState);
             (void)pfnDismDelete(pFeatureInfo);
         }
 

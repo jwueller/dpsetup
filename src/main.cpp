@@ -25,7 +25,11 @@ namespace
     while (true)
     {
         const auto cchBuffer = static_cast<DWORD>(path.size());
-        const DWORD cchPath = GetModuleFileNameW(nullptr, path.data(), cchBuffer);
+        const DWORD cchPath = GetModuleFileNameW(
+            nullptr,
+            path.data(),
+            cchBuffer
+        );
         if (cchPath == 0)
             return {};
 
@@ -47,9 +51,7 @@ namespace
 {
     const std::wstring path = GetOwnPath();
     const size_t slash = path.find_last_of(L'\\');
-    return slash != std::wstring::npos
-               ? path.substr(0, slash)
-               : L".";
+    return slash != std::wstring::npos ? path.substr(0, slash) : L".";
 }
 
 /// False when the query fails.
@@ -62,13 +64,14 @@ namespace
 
     TOKEN_ELEVATION elevation{};
     DWORD cbReturned = 0;
-    return GetTokenInformation(
+    const BOOL queried = GetTokenInformation(
         token.Get(),
         TokenElevation,
         &elevation,
         sizeof(elevation),
         &cbReturned
-    ) && elevation.TokenIsElevated != 0;
+    );
+    return queried && elevation.TokenIsElevated != 0;
 }
 
 /**
@@ -91,9 +94,7 @@ namespace
 
     if (IsElevated())
     {
-        LOG(
-            "running elevated"
-        );
+        LOG("running elevated");
         return false;
     }
 
@@ -107,32 +108,24 @@ namespace
     if (!ShellExecuteExW(&info))
     {
         const DWORD error = GetLastError();
-        LOG(
-            "ShellExecuteExW('{}') -> error {}",
-            Utf8FromWide(exePath),
-            error
-        );
-        exitCode = error == ERROR_CANCELLED ? ERROR_INSTALL_USEREXIT : ERROR_INSTALL_FAILURE;
+        LOG("ShellExecuteExW({:?}) -> error {}", Utf8FromWide(exePath), error);
+        const bool declined = error == ERROR_CANCELLED;
+        exitCode = declined ? ERROR_INSTALL_USEREXIT : ERROR_INSTALL_FAILURE;
         LOG(
             "install mode -> failed, exit code {} (requires administrator permissions, but elevation {})",
             exitCode,
-            error == ERROR_CANCELLED ? "was declined" : "failed"
+            declined ? "was declined" : "failed"
         );
         return true;
     }
 
     const UniqueHandle child(info.hProcess);
-    LOG(
-        "not elevated: relaunched elevated, waiting"
-    );
+    LOG("not elevated: relaunched elevated, waiting");
     WaitForSingleObject(child.Get(), INFINITE);
 
     DWORD childExitCode = ERROR_INSTALL_FAILURE;
     (void)GetExitCodeProcess(child.Get(), &childExitCode);
-    LOG(
-        "elevated child exited with {}",
-        childExitCode
-    );
+    LOG("elevated child exited with {}", childExitCode);
     exitCode = static_cast<int>(childExitCode);
     return true;
 }
@@ -151,24 +144,18 @@ namespace
     const UINT n = GetSystemDirectoryW(sysDir, MAX_PATH);
     if (n == 0 || n >= MAX_PATH)
     {
-        LOG(
-            "GetSystemDirectoryW -> {}",
-            n
-        );
+        LOG("GetSystemDirectoryW -> {}", n);
         return ERROR_INSTALL_FAILURE;
     }
     const std::wstring_view systemDirectory{sysDir, n};
-    LOG(
-        "GetSystemDirectoryW -> '{}'",
-        Utf8FromWide(systemDirectory)
-    );
+    LOG("GetSystemDirectoryW -> {:?}", Utf8FromWide(systemDirectory));
 
     if (const UniqueModule dismApi = LoadDismApi())
     {
         const bool ok = EnableDirectPlayFeature(dismApi.Get());
         LOG(
             "DISM {}",
-            ok ? "enabled the DirectPlay feature" : "did not leave the DirectPlay feature enabled"
+            ok ? "DirectPlay enabled" : "couldn't enable DirectPlay"
         );
         return ok ? ERROR_SUCCESS : ERROR_INSTALL_FAILURE;
     }
@@ -182,15 +169,13 @@ namespace
 
     if (extractResult != ExtractResult::Ok || !VerifyExtractedFiles(sysDir))
     {
-        LOG(
-            "extraction did not take effect"
-        );
+        LOG("extraction did not take effect");
         return ERROR_INSTALL_FAILURE;
     }
 
     PreferExtractedDirectPlay(sysDir);
     LOG(
-        "native DirectPlay extracted into '{}'",
+        "native DirectPlay extracted into {:?}",
         Utf8FromWide(systemDirectory)
     );
     return ERROR_SUCCESS;
@@ -203,27 +188,40 @@ namespace
 /// elevated, so a DLL planted beside it would run with that token. A null
 /// return lets the helper load it its own way, so the system directory's
 /// full path is the second try for a Windows that predates the flag.
-FARPROC WINAPI LoadDelayedFromSystemDirectory(const unsigned dliNotify, const PDelayLoadInfo pdli) noexcept
+FARPROC WINAPI LoadDelayedFromSystemDirectory(
+    const unsigned dliNotify,
+    const PDelayLoadInfo pdli
+) noexcept
 {
     if (dliNotify != dliNotePreLoadLibrary)
         return nullptr;
 
-    HMODULE hModule = LoadLibraryExA(pdli->szDll, nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    HMODULE hModule = LoadLibraryExA(
+        pdli->szDll,
+        nullptr,
+        LOAD_LIBRARY_SEARCH_SYSTEM32
+    );
     if (hModule == nullptr)
     {
         std::array<char, MAX_PATH> path{};
-        const UINT cchDirectory = GetSystemDirectoryA(path.data(), static_cast<UINT>(path.size()));
+        const UINT cchDirectory = GetSystemDirectoryA(path.data(), path.size());
         if (cchDirectory != 0 && cchDirectory < path.size())
         {
-            const std::string fullPath = std::string(path.data(), cchDirectory) + "\\" + pdli->szDll;
-            hModule = LoadLibraryExA(fullPath.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
+            const std::string fullPath =
+                std::string(path.data(), cchDirectory) + "\\" + pdli->szDll;
+            hModule = LoadLibraryExA(
+                fullPath.c_str(),
+                nullptr,
+                LOAD_WITH_ALTERED_SEARCH_PATH
+            );
         }
     }
     return reinterpret_cast<FARPROC>(hModule);
 }
 } // namespace
 
-extern "C" const PfnDliHook __pfnDliNotifyHook2 = LoadDelayedFromSystemDirectory;
+extern "C" const PfnDliHook __pfnDliNotifyHook2 =
+    LoadDelayedFromSystemDirectory;
 
 int WINAPI wWinMain(
     _In_ HINSTANCE hInstance,
@@ -246,7 +244,8 @@ int WINAPI wWinMain(
     const UniqueLocal argvOwner(argv);
     // A missing/unparsable command line falls back to install mode (argc <= 1).
     const bool extractionMode = argv && argc > 1;
-    const std::wstring targetDir = extractionMode ? std::wstring(argv[1]) : std::wstring();
+    const std::wstring targetDir =
+        extractionMode ? std::wstring(argv[1]) : std::wstring();
 
     LOG(
         "{} v{} {} mode",
@@ -272,11 +271,9 @@ int WINAPI wWinMain(
 
     // No DLL overrides, COM registration or DISM here: those only make sense
     // against the real system directory.
-    const ExtractResult extractResult = ExtractDirectPlayFiles(
-        exeDir,
-        targetDir
-    );
-    const bool ok = extractResult == ExtractResult::Ok && VerifyExtractedFiles(targetDir);
+    const auto extractResult = ExtractDirectPlayFiles(exeDir, targetDir);
+    const bool ok =
+        extractResult == ExtractResult::Ok && VerifyExtractedFiles(targetDir);
 
     // The exit code of a failure is the Win32 error that stopped the
     // extraction where there is one (ERROR_ACCESS_DENIED for a folder that
@@ -284,14 +281,17 @@ int WINAPI wWinMain(
     DWORD exitCode = ERROR_SUCCESS;
     if (extractResult == ExtractResult::Fatal)
         exitCode = ERROR_INSTALL_PACKAGE_INVALID;
+    else if (!ok && FirstExtractionError() != ERROR_SUCCESS)
+        exitCode = FirstExtractionError();
     else if (!ok)
-        exitCode = FirstExtractionError() != ERROR_SUCCESS ? FirstExtractionError() : ERROR_INSTALL_FAILURE;
+        exitCode = ERROR_INSTALL_FAILURE;
 
     LOG(
-        "extraction into '{}' -> {}, exit code {}",
+        "extraction into {:?} -> {}, exit code {}",
         Utf8FromWide(targetDir),
         ok ? "ok" : "failed",
         exitCode
     );
+
     return static_cast<int>(exitCode);
 }

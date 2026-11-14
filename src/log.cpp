@@ -78,7 +78,7 @@ void LogWrite(const std::string_view message) noexcept
             (void)WriteConsoleW(
                 g_hConsole,
                 wideLine.c_str(),
-                static_cast<DWORD>(wideLine.size()),
+                wideLine.size(),
                 &cchWritten,
                 nullptr
             );
@@ -88,11 +88,18 @@ void LogWrite(const std::string_view message) noexcept
         {
             line += "\r\n";
             DWORD cbWritten = 0;
-            (void)WriteFile(g_hLog, line.data(), static_cast<DWORD>(line.size()), &cbWritten, nullptr);
+            (void)WriteFile(
+                g_hLog,
+                line.data(),
+                line.size(),
+                &cbWritten,
+                nullptr
+            );
         }
     }
     catch (...)
     {
-        // A record that cannot be built is dropped; logging never affects the caller.
+        // A record that cannot be built is dropped; logging never affects the
+        // caller.
     }
 }

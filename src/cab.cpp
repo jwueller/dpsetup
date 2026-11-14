@@ -87,7 +87,10 @@ constexpr DxntCabMember kDxntCabPayload[] = {
 }
 
 /// ASCII folding only: the same answer on every machine and locale.
-[[nodiscard]] bool EqualsAsciiNoCase(const std::string_view lhs, const std::string_view rhs) noexcept
+[[nodiscard]] bool EqualsAsciiNoCase(
+    const std::string_view lhs,
+    const std::string_view rhs
+) noexcept
 {
     const auto lower = [](const char ch) noexcept
     {
@@ -232,20 +235,10 @@ FNWRITE(FdiWrite)
     {
         DWORD written = 0;
         const HANDLE hFile = s->hFile;
-        if (!WriteFile(
-            hFile,
-            pv,
-            cb,
-            &written,
-            nullptr
-        ))
+        if (!WriteFile(hFile, pv, cb, &written, nullptr))
         {
             const DWORD error = GetLastError();
-            LOG(
-                "WriteFile({} bytes) -> error {}",
-                cb,
-                error
-            );
+            LOG("WriteFile({} bytes) -> error {}", cb, error);
             return static_cast<UINT>(-1);
         }
         s->pos += written;
@@ -346,7 +339,7 @@ INT_PTR OnCopyFile(const PFDINOTIFICATION pfdin)
     if (GetFileAttributesW(destPath.c_str()) != INVALID_FILE_ATTRIBUTES)
     {
         LOG(
-            "OnCopyFile('{}') -> refusing to write through the surviving entry",
+            "OnCopyFile({:?}) -> refusing to write through the surviving entry",
             psz1
         );
         return -1;
@@ -366,17 +359,10 @@ INT_PTR OnCopyFile(const PFDINOTIFICATION pfdin)
         const DWORD error = GetLastError();
         if (g_firstError == ERROR_SUCCESS)
             g_firstError = error;
-        LOG(
-            "CreateFileW('{}') -> error {}",
-            Utf8FromWide(destPath),
-            error
-        );
+        LOG("CreateFileW({:?}) -> error {}", Utf8FromWide(destPath), error);
         return -1;
     }
-    LOG(
-        "OnCopyFile('{}') -> placed",
-        psz1
-    );
+    LOG("OnCopyFile({:?}) -> placed", psz1);
 
     auto* s = new FdiStream{};
     s->kind = FdiStream::Kind::SinkFile;
@@ -410,12 +396,15 @@ FNFDINOTIFY(FdiNotify)
 
 /// @ref FdiRead always seeks to an absolute position before reading, so
 /// hashing the whole file here does not need to rewind the handle afterward.
-[[nodiscard]] bool VerifyDxntCabIntegrity(const HANDLE hCab, const long long fileSize)
+[[nodiscard]] bool VerifyDxntCabIntegrity(
+    const HANDLE hCab,
+    const long long fileSize
+)
 {
     if (fileSize != kDxntCabSize)
     {
         LOG(
-            "VerifyDxntCabIntegrity('{}') -> size mismatch, {} bytes, expected {}",
+            "VerifyDxntCabIntegrity({:?}) -> size mismatch, {} bytes, expected {}",
             kDxntCabName,
             fileSize,
             kDxntCabSize
@@ -463,36 +452,20 @@ FNFDINOTIFY(FdiNotify)
     }
 
     constexpr LARGE_INTEGER zero{};
-    bool ok = SetFilePointerEx(
-        hCab,
-        zero,
-        nullptr,
-        FILE_BEGIN
-    ) != FALSE;
+    bool ok = SetFilePointerEx(hCab, zero, nullptr, FILE_BEGIN);
 
     BYTE buf[64 * 1024];
     while (ok)
     {
         DWORD read = 0;
-        if (!ReadFile(
-            hCab,
-            buf,
-            sizeof(buf),
-            &read,
-            nullptr
-        ))
+        if (!ReadFile(hCab, buf, sizeof(buf), &read, nullptr))
         {
             ok = false;
             break;
         }
         if (read == 0)
             break;
-        if (BCryptHashData(
-            hHash,
-            buf,
-            read,
-            0
-        ) != 0)
+        if (BCryptHashData(hHash, buf, read, 0) != 0)
         {
             ok = false;
             break;
@@ -500,15 +473,8 @@ FNFDINOTIFY(FdiNotify)
     }
 
     BYTE digest[32]{};
-    if (BCryptFinishHash(
-        hHash,
-        digest,
-        sizeof(digest),
-        0
-    ) != 0)
-    {
+    if (BCryptFinishHash(hHash, digest, sizeof(digest), 0) != 0)
         ok = false;
-    }
 
     BCryptDestroyHash(hHash);
     BCryptCloseAlgorithmProvider(hAlg, 0);
@@ -516,7 +482,7 @@ FNFDINOTIFY(FdiNotify)
     if (!ok)
     {
         LOG(
-            "VerifyDxntCabIntegrity('{}') -> SHA-256 computation failed",
+            "VerifyDxntCabIntegrity({:?}) -> SHA-256 computation failed",
             kDxntCabName
         );
 
@@ -528,7 +494,7 @@ FNFDINOTIFY(FdiNotify)
         const std::string sha256 = Base16From(digest);
         const std::string expected = Base16From(kDxntCabSha256);
         LOG(
-            "VerifyDxntCabIntegrity('{}') -> SHA-256 mismatch, got {}, expected {}",
+            "VerifyDxntCabIntegrity({:?}) -> SHA-256 mismatch, got {}, expected {}",
             kDxntCabName,
             sha256,
             expected
@@ -541,30 +507,28 @@ FNFDINOTIFY(FdiNotify)
 }
 } // namespace
 
-ExtractResult ExtractDirectPlayFiles(const std::wstring& exeDir, const std::wstring& destDir)
+ExtractResult ExtractDirectPlayFiles(
+    const std::wstring& exeDir,
+    const std::wstring& destDir
+)
 {
     g_firstError = ERROR_SUCCESS;
 
     const std::wstring dxntCabPath = exeDir + L"\\" + WidenAscii(kDxntCabName);
-    const UniqueHandle hCab(
-        CreateFileW(
-            dxntCabPath.c_str(),
-            GENERIC_READ,
-            FILE_SHARE_READ,
-            nullptr,
-            OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL,
-            nullptr
-        )
+    const HANDLE hCabFile = CreateFileW(
+        dxntCabPath.c_str(),
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        nullptr,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        nullptr
     );
+    const UniqueHandle hCab(hCabFile);
     if (!hCab)
     {
         const DWORD error = GetLastError();
-        LOG(
-            "CreateFileW('{}') -> error {}",
-            Utf8FromWide(dxntCabPath),
-            error
-        );
+        LOG("CreateFileW({:?}) -> error {}", Utf8FromWide(dxntCabPath), error);
         return ExtractResult::Failed;
     }
 
@@ -573,7 +537,7 @@ ExtractResult ExtractDirectPlayFiles(const std::wstring& exeDir, const std::wstr
     {
         const DWORD error = GetLastError();
         LOG(
-            "GetFileSizeEx('{}') -> error {}",
+            "GetFileSizeEx({:?}) -> error {}",
             Utf8FromWide(dxntCabPath),
             error
         );
@@ -590,7 +554,7 @@ ExtractResult ExtractDirectPlayFiles(const std::wstring& exeDir, const std::wstr
         // The value of an MSVC filesystem error is the Win32 error code.
         g_firstError = static_cast<DWORD>(ec.value());
         LOG(
-            "create_directories('{}') -> error {}",
+            "create_directories({:?}) -> error {}",
             Utf8FromWide(destDir),
             g_firstError
         );
@@ -618,9 +582,7 @@ ExtractResult ExtractDirectPlayFiles(const std::wstring& exeDir, const std::wstr
     );
     if (!hFdi)
     {
-        LOG(
-            "FDICreate(cpuUNKNOWN) -> failed"
-        );
+        LOG("FDICreate(cpuUNKNOWN) -> failed");
         return ExtractResult::Failed;
     }
 
@@ -634,7 +596,7 @@ ExtractResult ExtractDirectPlayFiles(const std::wstring& exeDir, const std::wstr
         FdiNotify,
         nullptr,
         nullptr
-    ) != FALSE;
+    );
     LOG(
         "FDICopy -> {} (erfOper {}, erfType {})",
         ok ? "ok" : "failed",
@@ -664,7 +626,7 @@ bool VerifyExtractedFiles(const std::wstring& destDir)
         )
         {
             LOG(
-                "VerifyExtractedFiles('{}') -> {} missing",
+                "VerifyExtractedFiles({:?}) -> {} missing",
                 Utf8FromWide(destDir),
                 name
             );
@@ -674,7 +636,7 @@ bool VerifyExtractedFiles(const std::wstring& destDir)
         {
             const auto actualSize = info.nFileSizeLow;
             LOG(
-                "VerifyExtractedFiles('{}') -> {} size mismatch, {} bytes, expected {}",
+                "VerifyExtractedFiles({:?}) -> {} size mismatch, {} bytes, expected {}",
                 Utf8FromWide(destDir),
                 name,
                 actualSize,
@@ -685,7 +647,7 @@ bool VerifyExtractedFiles(const std::wstring& destDir)
     }
     constexpr auto cFiles = std::size(kDxntCabPayload);
     LOG(
-        "VerifyExtractedFiles('{}') -> all {} native binaries present",
+        "VerifyExtractedFiles({:?}) -> all {} native binaries present",
         Utf8FromWide(destDir),
         cFiles
     );
