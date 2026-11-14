@@ -20,9 +20,9 @@ BEGIN
             VALUE "ProductVersion",     PROJECT_VERSION
             VALUE "Comments",           PROJECT_NOTICE
             VALUE "FileVersion",        PROJECT_VERSION
-            VALUE "FileDescription",    DPSETUP_DESCRIPTION
-            VALUE "InternalName",       DPSETUP_MODULE
-            VALUE "OriginalFilename",   DPSETUP_MODULE ".exe"
+            VALUE "FileDescription",    PROJECT_DESCRIPTION
+            VALUE "InternalName",       PROJECT_MODULE
+            VALUE "OriginalFilename",   PROJECT_MODULE ".exe"
         END
     END
     BLOCK "VarFileInfo"

@@ -26,7 +26,7 @@ release.
 
 The version string is `<version>+r<commit count>.<commit>`; a debug build or
 a tree with uncommitted changes is a preview and says `preview` in place of
-the commit. `DPSETUP_SIGN_ARGS` (a CMake cache string, empty by default)
+the commit. `SIGNTOOL_ARGS` (a CMake cache string, empty by default)
 takes verbatim `signtool sign` arguments; only a release build of a clean
 tree is signed.
 

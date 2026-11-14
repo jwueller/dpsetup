@@ -282,7 +282,7 @@ int WINAPI wWinMain(
 
     LOG(
         "{} v{} {} mode",
-        DPSETUP_MODULE,
+        PROJECT_MODULE,
         PROJECT_VERSION,
         extractionMode ? "extraction" : "install"
     );

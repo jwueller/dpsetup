@@ -21,12 +21,8 @@
 #define PROJECT_VERSION_PATCH           @PROJECT_VERSION_PATCH@
 #define PROJECT_VERSION_TWEAK           @PROJECT_VERSION_TWEAK@
 
-// `#cmakedefine01` rather than a substitution: CMake booleans are the strings
-// `ON`/`OFF`, and the preprocessor evaluates an unknown identifier as 0: so a
-// pasted `ON` would read as false in `#if`, exactly like `OFF`, and every gated
-// block would vanish with no diagnostic.
+#define PROJECT_MODULE                  @PROJECT_MODULE@
+
+// CMake booleans are the strings `ON`/`OFF`, so they have to be converted to
+// something the preprocessor will understand.
 #cmakedefine01 PROJECT_PREVIEW
-
-#define DPSETUP_MODULE                  @DPSETUP_MODULE@
-#define DPSETUP_DESCRIPTION             @DPSETUP_DESCRIPTION@
-
