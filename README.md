@@ -8,7 +8,7 @@ Microsoft's _DirectPlay_ has been deprecated and is no longer installed and/or e
 - Offline
 - Works under Wine/Proton
 
-Originally born out of [DirectRetrofit](https://retrofit.games) v1.x, and turned into a standalone utility for posterity. DirectRetrofit v2.x or greater no longer depends on Microsoft's _DirectPlay_ implementation, but will coexist with it.
+Originally written for [DirectRetrofit](https://retrofit.games) v1.x, and turned into a standalone utility for posterity. DirectRetrofit v2.x or greater no longer depends on Microsoft's _DirectPlay_ implementation, but will coexist with it.
 
 For source code, issues and releases, visit: https://github.com/jwueller/dpsetup
 

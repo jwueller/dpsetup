@@ -8,7 +8,7 @@ has one home; anything a human needs belongs there, not here.
 
 ## Working in this repository
 
-- dpsetup was born out of DirectRetrofit v1.x, and saying so is fine.
+- dpsetup was extracted from DirectRetrofit v1.x, and saying so is fine.
   Nothing else here names DirectRetrofit: not a comment, not a shipped
   script, not a commit message.
 - **Never run `dpsetup.exe` without an argument to try a change.** That is
