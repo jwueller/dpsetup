@@ -49,6 +49,8 @@ Ship the entire contents of `redistributable/` with the game, for example in a `
 
 `SHA256SUMS.txt` covers every file of a release. Use `sha256sum -c SHA256SUMS.txt` or equivalent to verify.
 
+`dpsetup.exe` and the scripts are released under the [zlib license](LICENSE): use, modify and redistribute them freely; binary distributions need no attribution or license notice, but altered versions must not be passed off as the original. Microsoft's files remain under Microsoft's redistribution terms, described below.
+
 ## Microsoft DirectX Runtime (February 2010)
 
 This is the last release of Microsoft's DirectX that still contains _DirectPlay_:

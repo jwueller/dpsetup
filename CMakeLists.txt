@@ -236,6 +236,7 @@ add_custom_target(dist ALL
 
     COMMAND ${CMAKE_COMMAND} -E copy
     "${CMAKE_SOURCE_DIR}/README.md"
+    "${CMAKE_SOURCE_DIR}/LICENSE"
     "${PROJECT_DIST_ROOT}/"
 
     # Pins the tree byte for byte wherever it is vendored, so SHA256SUMS.txt
