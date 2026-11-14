@@ -194,7 +194,7 @@ FNWRITE(FdiWrite)
         {
             const DWORD error = GetLastError();
             LOG(
-                "WriteFile({} bytes) failed: error {}",
+                "WriteFile({} bytes) -> error {}",
                 cb,
                 error
             );
@@ -301,7 +301,7 @@ INT_PTR OnCopyFile(const PFDINOTIFICATION pfdin)
     if (GetFileAttributesW(destPath.c_str()) != INVALID_FILE_ATTRIBUTES)
     {
         LOG(
-            "OnCopyFile('{}'): refusing to write through the surviving entry",
+            "OnCopyFile('{}') -> refusing to write through the surviving entry",
             psz1
         );
         return -1;
@@ -322,14 +322,14 @@ INT_PTR OnCopyFile(const PFDINOTIFICATION pfdin)
         if (g_firstError == ERROR_SUCCESS)
             g_firstError = error;
         LOG(
-            "CreateFileW('{}') failed: error {}",
+            "CreateFileW('{}') -> error {}",
             Utf8FromWide(destPath),
             error
         );
         return -1;
     }
     LOG(
-        "OnCopyFile('{}'): placed",
+        "OnCopyFile('{}') -> placed",
         psz1
     );
 
@@ -385,7 +385,7 @@ FNFDINOTIFY(FdiNotify)
     if (fileSize != kDxntCabExpectedSize)
     {
         LOG(
-            "VerifyDxntCabIntegrity('{}'): size mismatch, {} bytes, expected {}",
+            "VerifyDxntCabIntegrity('{}') -> size mismatch, {} bytes, expected {}",
             kDxntCabName,
             fileSize,
             kDxntCabExpectedSize
@@ -404,7 +404,7 @@ FNFDINOTIFY(FdiNotify)
     if (openStatus != 0)
     {
         LOG(
-            "BCryptOpenAlgorithmProvider(SHA256) failed: status 0x{:08X}",
+            "BCryptOpenAlgorithmProvider(SHA256) -> status 0x{:08X}",
             static_cast<unsigned>(openStatus)
         );
 
@@ -424,7 +424,7 @@ FNFDINOTIFY(FdiNotify)
     if (createStatus != 0)
     {
         LOG(
-            "BCryptCreateHash failed: status 0x{:08X}",
+            "BCryptCreateHash -> status 0x{:08X}",
             static_cast<unsigned>(createStatus)
         );
 
@@ -486,7 +486,7 @@ FNFDINOTIFY(FdiNotify)
     if (!ok)
     {
         LOG(
-            "VerifyDxntCabIntegrity('{}'): SHA-256 computation failed",
+            "VerifyDxntCabIntegrity('{}') -> SHA-256 computation failed",
             kDxntCabName
         );
 
@@ -498,7 +498,7 @@ FNFDINOTIFY(FdiNotify)
         const std::string sha256 = Base16FromBytes(digest);
         const std::string expected = Base16FromBytes(kDxntCabExpectedSha256);
         LOG(
-            "VerifyDxntCabIntegrity('{}'): SHA-256 mismatch, got {}, expected {}",
+            "VerifyDxntCabIntegrity('{}') -> SHA-256 mismatch, got {}, expected {}",
             kDxntCabName,
             sha256,
             expected
@@ -538,7 +538,7 @@ ExtractResult ExtractDirectPlayFiles(const std::wstring& dxntCabPath, const std:
     {
         const DWORD error = GetLastError();
         LOG(
-            "CreateFileW('{}') failed: error {}",
+            "CreateFileW('{}') -> error {}",
             Utf8FromWide(dxntCabPath),
             error
         );
@@ -550,7 +550,7 @@ ExtractResult ExtractDirectPlayFiles(const std::wstring& dxntCabPath, const std:
     {
         const DWORD error = GetLastError();
         LOG(
-            "GetFileSizeEx('{}') failed: error {}",
+            "GetFileSizeEx('{}') -> error {}",
             Utf8FromWide(dxntCabPath),
             error
         );
@@ -582,7 +582,7 @@ ExtractResult ExtractDirectPlayFiles(const std::wstring& dxntCabPath, const std:
     if (!hFdi)
     {
         LOG(
-            "FDICreate(cpuUNKNOWN) failed"
+            "FDICreate(cpuUNKNOWN) -> failed"
         );
         return ExtractResult::Failed;
     }
@@ -599,7 +599,7 @@ ExtractResult ExtractDirectPlayFiles(const std::wstring& dxntCabPath, const std:
         nullptr
     ) != FALSE;
     LOG(
-        "FDICopy: {} (erfOper {}, erfType {})",
+        "FDICopy -> {} (erfOper {}, erfType {})",
         ok ? "ok" : "failed",
         erf.erfOper,
         erf.erfType
@@ -617,7 +617,7 @@ ExtractResult RunExtractionPipeline(const std::wstring& exeDir, const std::wstri
     {
         const DWORD error = GetLastError();
         LOG(
-            "GetFileAttributesW('{}') failed: error {}",
+            "GetFileAttributesW('{}') -> error {}",
             Utf8FromWide(cabPath),
             error
         );
@@ -632,7 +632,7 @@ ExtractResult RunExtractionPipeline(const std::wstring& exeDir, const std::wstri
         // The value of an MSVC filesystem error is the Win32 error code.
         g_firstError = static_cast<DWORD>(ec.value());
         LOG(
-            "create_directories('{}') failed: error {}",
+            "create_directories('{}') -> error {}",
             Utf8FromWide(destDir),
             g_firstError
         );
@@ -659,7 +659,8 @@ bool VerifyExtractedFiles(const std::wstring& destDir)
         )
         {
             LOG(
-                "VerifyExtractedFiles: {} missing",
+                "VerifyExtractedFiles('{}') -> {} missing",
+                Utf8FromWide(destDir),
                 name
             );
             return false;
@@ -668,7 +669,8 @@ bool VerifyExtractedFiles(const std::wstring& destDir)
         {
             const auto actualSize = info.nFileSizeLow;
             LOG(
-                "VerifyExtractedFiles: {} size mismatch, {} bytes, expected {}",
+                "VerifyExtractedFiles('{}') -> {} size mismatch, {} bytes, expected {}",
+                Utf8FromWide(destDir),
                 name,
                 actualSize,
                 expectedSize
@@ -678,7 +680,8 @@ bool VerifyExtractedFiles(const std::wstring& destDir)
     }
     constexpr auto cFiles = std::size(kWantedFiles);
     LOG(
-        "VerifyExtractedFiles: all {} native binaries present",
+        "VerifyExtractedFiles('{}') -> all {} native binaries present",
+        Utf8FromWide(destDir),
         cFiles
     );
     return true;

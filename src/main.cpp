@@ -111,13 +111,13 @@ namespace
     {
         const DWORD error = GetLastError();
         LOG(
-            "ShellExecuteExW('{}') failed: error {}",
+            "ShellExecuteExW('{}') -> error {}",
             Utf8FromWide(exePath),
             error
         );
         exitCode = error == ERROR_CANCELLED ? ERROR_INSTALL_USEREXIT : ERROR_INSTALL_FAILURE;
         LOG(
-            "install mode: failed, exit code {} (requires administrator permissions, but elevation {})",
+            "install mode -> failed, exit code {} (requires administrator permissions, but elevation {})",
             exitCode,
             error == ERROR_CANCELLED ? "was declined" : "failed"
         );
@@ -171,14 +171,14 @@ namespace
     if (n == 0 || n >= MAX_PATH)
     {
         LOG(
-            "GetSystemDirectoryW failed: returned {}",
+            "GetSystemDirectoryW -> {}",
             n
         );
         return ERROR_INSTALL_FAILURE;
     }
     const std::wstring_view systemDirectory{sysDir, n};
     LOG(
-        "GetSystemDirectoryW: '{}'",
+        "GetSystemDirectoryW -> '{}'",
         Utf8FromWide(systemDirectory)
     );
 
@@ -295,7 +295,7 @@ int WINAPI wWinMain(
 
         const DWORD exitCode = RunInstallMode(exeDir);
         LOG(
-            "install mode: {}, exit code {}",
+            "install mode -> {}, exit code {}",
             exitCode == ERROR_SUCCESS ? "ok" : "failed",
             exitCode
         );
@@ -323,7 +323,7 @@ int WINAPI wWinMain(
         exitCode = FirstExtractionError() != ERROR_SUCCESS ? FirstExtractionError() : ERROR_INSTALL_FAILURE;
 
     LOG(
-        "extraction into '{}': {}, exit code {}",
+        "extraction into '{}' -> {}, exit code {}",
         Utf8FromWide(targetDir),
         ok ? "ok" : "failed",
         exitCode

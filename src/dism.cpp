@@ -123,11 +123,11 @@ UniqueModule LoadDismApi()
     UniqueModule dismApi(LoadLibraryExW(L"dismapi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32));
     if (dismApi)
     {
-        LOG("LoadLibraryExW('dismapi.dll'): ok");
+        LOG("LoadLibraryExW('dismapi.dll') -> ok");
     }
     else
     {
-        LOG("LoadLibraryExW('dismapi.dll') failed: error {}", GetLastError());
+        LOG("LoadLibraryExW('dismapi.dll') -> error {}", GetLastError());
     }
     return dismApi;
 }
@@ -154,7 +154,7 @@ bool EnableDirectPlayFeature(const HMODULE hDismApi)
     )
     {
         LOG(
-            "GetProcAddress: dismapi.dll lacks a DISM API export"
+            "GetProcAddress -> dismapi.dll lacks a DISM API export"
         );
         return false;
     }
@@ -164,7 +164,7 @@ bool EnableDirectPlayFeature(const HMODULE hDismApi)
         if (SUCCEEDED(hr))
         {
             LOG(
-                "{}: hr 0x{:08X}",
+                "{} -> hr 0x{:08X}",
                 symbol,
                 static_cast<unsigned>(hr)
             );
@@ -177,7 +177,7 @@ bool EnableDirectPlayFeature(const HMODULE hDismApi)
                 ? pMessage->Value
                 : L"";
         LOG(
-            "{}: error hr 0x{:08X} {}",
+            "{} -> error hr 0x{:08X} {}",
             symbol,
             static_cast<unsigned>(hr),
             Utf8FromWide(message)
@@ -232,7 +232,7 @@ bool EnableDirectPlayFeature(const HMODULE hDismApi)
             enabled = state == DismStateInstalled || state == DismStateInstallPending;
             const std::string_view featureState = NameFromFeatureState(state);
             LOG(
-                "DismGetFeatureInfo: feature state {}",
+                "DismGetFeatureInfo -> feature state {}",
                 featureState
             );
             (void)pfnDismDelete(pFeatureInfo);

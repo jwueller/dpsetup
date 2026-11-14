@@ -120,7 +120,7 @@ bool UnixRemoveEntry(const std::wstring& dir, const std::wstring& fileName)
     {
         const DWORD error = GetLastError();
         LOG(
-            "CreateProcessW('{}') failed: error {}",
+            "CreateProcessW('{}') -> error {}",
             Utf8FromWide(startExe),
             error
         );
@@ -140,7 +140,7 @@ bool UnixRemoveEntry(const std::wstring& dir, const std::wstring& fileName)
         if (GetFileAttributesW(dosPath.c_str()) == INVALID_FILE_ATTRIBUTES)
         {
             LOG(
-                "UnixRemoveEntry('{}'): removed",
+                "UnixRemoveEntry('{}') -> ok",
                 unixPath
             );
             return true;
@@ -148,7 +148,7 @@ bool UnixRemoveEntry(const std::wstring& dir, const std::wstring& fileName)
         Sleep(MillisecondsFrom(20ms));
     }
     LOG(
-        "UnixRemoveEntry('{}'): still present after unlink",
+        "UnixRemoveEntry('{}') -> still present after unlink",
         unixPath
     );
     return false;
@@ -181,7 +181,7 @@ void ApplyWineDllOverrides()
     if (lStatus != ERROR_SUCCESS)
     {
         LOG(
-            "RegCreateKeyExW('HKCU\\{}') failed: hr 0x{:08X}",
+            "RegCreateKeyExW('HKCU\\{}') -> hr 0x{:08X}",
             Utf8FromWide(lpSubKey),
             static_cast<unsigned>(HRESULT_FROM_WIN32(lStatus))
         );
@@ -211,7 +211,7 @@ void ApplyWineDllOverrides()
 
     const auto cOverrides = std::size(kDllOverrideNames);
     LOG(
-        "ApplyWineDllOverrides: {} of {} set",
+        "ApplyWineDllOverrides -> {} of {} set",
         written,
         cOverrides
     );
@@ -245,7 +245,7 @@ void RegisterWineComServers(const std::wstring& destDir)
             // Continues past individual failures: a single missing COM server
             // here isn't fatal.
             LOG(
-                "LoadLibraryExW('{}') failed: error {}",
+                "LoadLibraryExW('{}') -> error {}",
                 Utf8FromWide(fullPath),
                 GetLastError()
             );
@@ -259,7 +259,7 @@ void RegisterWineComServers(const std::wstring& destDir)
         {
             const HRESULT hr = pDllRegisterServer();
             LOG(
-                "DllRegisterServer('{}'): {} hr 0x{:08X}",
+                "DllRegisterServer('{}') -> {} HRESULT{{0x{:08X}}}",
                 Utf8FromWide(dll),
                 SUCCEEDED(hr) ? "ok" : "failed",
                 static_cast<unsigned>(hr)
@@ -268,7 +268,7 @@ void RegisterWineComServers(const std::wstring& destDir)
         else
         {
             LOG(
-                "GetProcAddress('{}'): exports no DllRegisterServer",
+                "GetProcAddress('{}') -> exports no DllRegisterServer",
                 Utf8FromWide(dll)
             );
         }
