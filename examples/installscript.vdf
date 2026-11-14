@@ -48,6 +48,6 @@
     // The name is what the rule is listed under.
     "Firewall"
     {
-        "My Game"   "%INSTALLDIR%\\game.exe"
+        "Example Game"   "%INSTALLDIR%\\game.exe"
     }
 }

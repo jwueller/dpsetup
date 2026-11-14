@@ -4,14 +4,14 @@
     "clientId": "",
     "clientSecret": "",
     "version": "1.0",
-    "installDirectory": "My Game",
-    "name": "My Game",
+    "installDirectory": "Example Game",
+    "name": "Example Game",
     "platform": "windows",
     "scriptInterpreter": true,
     "dependencies": [],
     "products": [
       {
-        "name": "My Game",
+        "name": "Example Game",
         "productId": "",
         "depots": [
           {
@@ -63,7 +63,7 @@
         "tasks": [
           {
             "type": "FileTask",
-            "name": "My Game",
+            "name": "Example Game",
             "category": "game",
             "path": "game.exe",
             "isPrimary": true
