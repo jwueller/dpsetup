@@ -87,17 +87,3 @@ using UniqueHandle = UniqueResource<HANDLE, &CloseHandle>;
 using UniqueModule = UniqueResource<HMODULE, &FreeLibrary>;
 using UniqueKey = UniqueResource<HKEY, &RegCloseKey>;
 using UniqueLocal = UniqueResource<HLOCAL, &LocalFree>;
-
-/// Takes over both handles a successful @ref CreateProcessW wrote into
-/// @p pi.
-struct UniqueProcessInformation
-{
-    UniqueHandle m_hProcess;
-    UniqueHandle m_hThread;
-
-    explicit UniqueProcessInformation(const PROCESS_INFORMATION& pi) noexcept :
-        m_hProcess(pi.hProcess),
-        m_hThread(pi.hThread)
-    {
-    }
-};

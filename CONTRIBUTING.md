@@ -121,11 +121,12 @@ Decisions that shape the program, and the constraint behind each.
   (3010), because Steam would run the setup again on every launch until
   the restart, and the maintainer's experience is that the feature works
   without it.
-- **Extraction is allowlist-only from a pinned cabinet.** `dxnt.cab` is
+- **Extraction takes an exact set from a pinned cabinet.** `dxnt.cab` is
   checked against an exact size and SHA-256 (`VerifyDxntCabIntegrity`)
-  before any extraction pass touches it, and only `kWantedFiles` leave it:
-  the cabinet also carries ancient Direct3D binaries that must never reach
-  a system directory.
+  before any extraction pass touches it, and exactly the files of
+  `kDxntCabPayload` leave it, each of which must arrive: the cabinet also
+  carries ancient Direct3D binaries that must never reach a system
+  directory.
 - **Under Wine, removal drops to a Unix `unlink`.** The system-directory
   DirectPlay DLLs of a prefix are transparent symlinks into a read-only
   builtin; Wine presents such a link to Win32 as its target, so
@@ -164,7 +165,7 @@ Decisions that shape the program, and the constraint behind each.
   answered; cancelling fails it with `ERROR_ACCESS_DENIED` (2026-10-08,
   Windows 11 26100).
 - **Replacing `dxnt.cab` means updating the pinned size and hash and every
-  `kWantedFiles` size together**, or every run reports corruption.
+  `kDxntCabPayload` size together**, or every run reports corruption.
 - **`VerifyExtractedFiles` checks exact sizes.** Don't loosen it to an
   existence check; the stand-ins above pass one.
 - **The override names' mixed `.exe` suffixes** (`dplaysvr.exe` beside

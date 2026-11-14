@@ -1,7 +1,3 @@
-/// @file
-/// The Windows leg: DirectPlay is an off-by-default optional feature, enabled
-/// the sanctioned way (the DISM API) instead of by installing files ourselves.
-
 #include <Windows.h>
 
 #include <string>
@@ -9,7 +5,7 @@
 
 #include "encoding.h"
 #include "log.h"
-#include "module_handle.h"
+#include "proc_address.h"
 #include "unique_resource.h"
 
 #include "steps.h"

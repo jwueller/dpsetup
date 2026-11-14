@@ -10,7 +10,7 @@
 # one `sha256sum -c` from the unpacked directory covers every shipped file.
 #
 # Only the hashes live here. The release id and the git ref are already
-# compiled into the exe's version resource (see metarc.h), so repeating them
+# compiled into the exe's version resource (see src/main.rc), so repeating them
 # in a side file would be a second copy free to disagree with the artifact it
 # describes. The leading comment carries the
 # human-readable release id purely as an anchor: `sha256sum -c` skips `#`

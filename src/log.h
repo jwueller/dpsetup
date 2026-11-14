@@ -8,10 +8,10 @@
 #include <string>
 #include <string_view>
 
-/// Opens @p path for appending, replacing a log already open, and attaches to
-/// the parent console if there is one. Returns false when the file cannot be
-/// opened; records then go to the console only.
-bool LogOpen(const std::wstring& path) noexcept;
+/// Opens @p path for appending and attaches to the parent console if there is
+/// one. Called once per run. When the file cannot be opened, records go to
+/// the console only.
+void LogOpen(const std::wstring& path) noexcept;
 
 /// Writes one record: UTC timestamp, @p message. A line break inside
 /// @p message becomes a space so a record stays one line. A record says on its

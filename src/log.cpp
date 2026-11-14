@@ -17,15 +17,9 @@ HANDLE g_hLog = INVALID_HANDLE_VALUE;
 HANDLE g_hConsole = INVALID_HANDLE_VALUE;
 } // namespace
 
-bool LogOpen(const std::wstring& path) noexcept
+void LogOpen(const std::wstring& path) noexcept
 {
-    if (g_hLog != INVALID_HANDLE_VALUE)
-    {
-        (void)CloseHandle(g_hLog);
-        g_hLog = INVALID_HANDLE_VALUE;
-    }
-
-    if (g_hConsole == INVALID_HANDLE_VALUE && AttachConsole(ATTACH_PARENT_PROCESS))
+    if (AttachConsole(ATTACH_PARENT_PROCESS))
     {
         g_hConsole = CreateFileW(
             L"CONOUT$",
@@ -52,7 +46,6 @@ bool LogOpen(const std::wstring& path) noexcept
         FILE_ATTRIBUTE_NORMAL,
         nullptr
     );
-    return g_hLog != INVALID_HANDLE_VALUE;
 }
 
 void LogWrite(const std::string_view message) noexcept

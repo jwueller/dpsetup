@@ -1,41 +1,14 @@
-/**
- * @file
- *
- * @brief DirectPlay prerequisite bootstrap: Makes the official Microsoft
- *  DirectPlay component available. Triggered once per machine (Windows) or per
- *  prefix (Wine/Proton) by a Steam install script such as
- *  `examples/installscript.vdf`.
- *
- * @note Standalone by design: a windowless GUI-subsystem exe that statically
- *  links the CRT (see CMakeLists.txt) so it works during Steam's prerequisite
- *  installation step, before any vcredist is guaranteed to be present.
- *
- * @note Being GUI-subsystem, shells do not wait for it by default (Steam
- *  waits on the process handle and reads the exit code regardless). Callers
- *  that need the result must wait themselves:
- *  `start /wait dpsetup.exe <args>` (cmd) or
- *  `(Start-Process dpsetup.exe -ArgumentList <args> -Wait -PassThru).ExitCode`
- *  (PowerShell). When launched from a terminal, the log records are also
- *  written to that console (see `log.h`).
- *
- * @note Orchestration only: CAB/FDI
- *  extraction and its verification live in `cab.cpp`, the Wine
- *  overrides and COM registration in `wine.cpp`, and the Windows
- *  leg (DISM) in `dism.cpp`: `steps.h` declares what crosses those
- *  file boundaries.
- */
-
 #include <Windows.h>
 #include <delayimp.h>
 #include <shellapi.h>
 
+#include <algorithm>
 #include <array>
 #include <string>
 #include <string_view>
 
 #include "encoding.h"
 #include "log.h"
-#include "module_handle.h"
 #include "unique_resource.h"
 #include "meta.h"
 
@@ -43,17 +16,43 @@
 
 namespace
 {
-/// Directory containing this executable, without a trailing backslash.
+/// Empty on failure.
+[[nodiscard]] std::wstring GetOwnPath()
+{
+    constexpr DWORD cchMax = 32768;
+
+    std::wstring path(MAX_PATH, L'\0');
+    while (true)
+    {
+        const auto cchBuffer = static_cast<DWORD>(path.size());
+        const DWORD cchPath = GetModuleFileNameW(nullptr, path.data(), cchBuffer);
+        if (cchPath == 0)
+            return {};
+
+        if (cchPath < cchBuffer)
+        {
+            path.resize(cchPath);
+            return path;
+        }
+
+        if (cchBuffer >= cchMax)
+            return {};
+
+        path.resize(std::min(cchBuffer * 2, cchMax));
+    }
+}
+
+/// Without a trailing backslash.
 [[nodiscard]] std::wstring GetOwnDirectory()
 {
-    const std::wstring path = ModulePathFrom(nullptr);
+    const std::wstring path = GetOwnPath();
     const size_t slash = path.find_last_of(L'\\');
     return slash != std::wstring::npos
                ? path.substr(0, slash)
                : L".";
 }
 
-/// Whether this process token is elevated (always false when the query fails).
+/// False when the query fails.
 [[nodiscard]] bool IsElevated() noexcept
 {
     HANDLE hToken = nullptr;
@@ -98,7 +97,7 @@ namespace
         return false;
     }
 
-    const std::wstring exePath = ModulePathFrom(nullptr);
+    const std::wstring exePath = GetOwnPath();
     SHELLEXECUTEINFOW info{};
     info.cbSize = sizeof(info);
     info.fMask = SEE_MASK_NOCLOSEPROCESS;
@@ -138,26 +137,10 @@ namespace
     return true;
 }
 
-/**
- * @brief No-argument mode, run by Steam's install-script runner.
- *
- * @note Routes by which servicing stack the machine has
- *  (@ref LoadDismApi). Windows gets DISM, and a failure there
- *  ends the run: with the feature off, Windows' system directory holds
- *  stand-ins an administrator may overwrite, so extracting would "succeed"
- *  there and leave unserviced DirectX 9 era binaries in place of Windows'
- *  own, plus Wine registry keys. Anything else (a Wine/Proton prefix, which has no DISM
- *  API) gets the extraction tier.
- *
- * @returns The process exit code, a Win32 error code as Windows installers
- *  use them. `ERROR_SUCCESS` only when Microsoft's DirectPlay is available
- *  afterwards: the feature reads back as enabled, or the extracted files
- *  are in the prefix's system directory at their exact sizes. Steam's
- *  install-script runner takes 0 as "done, never run again" and anything
- *  else as "run again on the next launch". A restart Windows asks for is
- *  still `ERROR_SUCCESS`, never `ERROR_SUCCESS_REBOOT_REQUIRED`: Steam
- *  would run the setup again, and the feature works without the restart.
- */
+/// Routes on @ref LoadDismApi alone, never falling back to extraction, and
+/// returns `ERROR_SUCCESS` only when DirectPlay is available afterwards, a
+/// pending restart included. CONTRIBUTING's Design and Traps hold the
+/// reasons.
 [[nodiscard]] DWORD RunInstallMode(const std::wstring& exeDir)
 {
     // The DirectPlay binaries are 32-bit only; GetSystemDirectoryW(),
@@ -190,8 +173,7 @@ namespace
         return ok ? ERROR_SUCCESS : ERROR_INSTALL_FAILURE;
     }
 
-    // Place Microsoft's native DirectPlay in the prefix's system directory.
-    const ExtractResult extractResult = RunExtractionPipeline(exeDir, sysDir);
+    const ExtractResult extractResult = ExtractDirectPlayFiles(exeDir, sysDir);
     if (extractResult == ExtractResult::Fatal)
     {
         LOG("FATAL: dxnt.cab failed its integrity check");
@@ -206,8 +188,7 @@ namespace
         return ERROR_INSTALL_FAILURE;
     }
 
-    ApplyWineDllOverrides();
-    RegisterWineComServers(sysDir);
+    PreferExtractedDirectPlay(sysDir);
     LOG(
         "native DirectPlay extracted into '{}'",
         Utf8FromWide(systemDirectory)
@@ -244,10 +225,6 @@ FARPROC WINAPI LoadDelayedFromSystemDirectory(const unsigned dliNotify, const PD
 
 extern "C" const PfnDliHook __pfnDliNotifyHook2 = LoadDelayedFromSystemDirectory;
 
-/**
- * @brief Dispatches between install mode (no arguments, @ref RunInstallMode)
- *  and extraction mode (one argument: the directory to extract into).
- */
 int WINAPI wWinMain(
     _In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
@@ -262,9 +239,6 @@ int WINAPI wWinMain(
 
     const std::wstring exeDir = GetOwnDirectory();
 
-    // Open the breadcrumb log for BOTH modes: if setup ever fails in the
-    // field, this file is the only record of why. A failure to open it is
-    // non-fatal: the LOG calls then reach the console only, if there is one.
     LogOpen(exeDir + L"\\dpsetup.log");
 
     int argc = 0;
@@ -296,12 +270,9 @@ int WINAPI wWinMain(
         return static_cast<int>(exitCode);
     }
 
-    // Extraction mode: `dpsetup.exe <dir>` extracts kWantedFiles from
-    // dxnt.cab into <dir> and nothing else: no DLL overrides, no COM
-    // registration, no DISM, since those only make sense against the real
-    // system directory. The exit code means "the 8 binaries are in <dir>
-    // with their exact expected sizes", same rigor as install mode's Tier 1.
-    const ExtractResult extractResult = RunExtractionPipeline(
+    // No DLL overrides, COM registration or DISM here: those only make sense
+    // against the real system directory.
+    const ExtractResult extractResult = ExtractDirectPlayFiles(
         exeDir,
         targetDir
     );

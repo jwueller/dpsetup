@@ -164,15 +164,10 @@ add_executable(${PROJECT_MODULE} WIN32
 
     # Listed only so an IDE attributes the headers to the target.
     "src/steps.h"
-    "src/base16.h"
     "src/casts.h"
-    "src/duration.h"
     "src/encoding.h"
     "src/log.h"
-    "src/metarc.h"
-    "src/module_handle.h"
-    "src/symbol.h"
-    "src/text.h"
+    "src/proc_address.h"
     "src/unique_resource.h"
 )
 

@@ -1,11 +1,3 @@
-/// @file
-/// CAB/FDI extraction and integrity verification: opening `dxnt.cab`,
-/// verifying it against the pinned size/SHA-256 before any FDI pass touches
-/// it, running the single FDI pass that extracts @ref kWantedFiles into a
-/// destination directory, and checking afterwards that the destination holds
-/// the extracted files. Everything the other files call is declared in
-/// `steps.h`; the rest here is this file's own machinery.
-
 #include <Windows.h>
 #include <bcrypt.h>
 #include <fdi.h>
@@ -19,34 +11,32 @@
 #include <cstring>
 #include <filesystem>
 #include <iterator>
+#include <span>
 #include <string>
+#include <string_view>
 #include <cstdint>
 #include <system_error>
 
-#include "base16.h"
 #include "encoding.h"
 #include "log.h"
-#include "text.h"
 #include "unique_resource.h"
 
 #include "steps.h"
 
 namespace
 {
-/**
- * @brief Pinned identity of the committed @ref kDxntCabName (the
- *  Feb-2010 DirectX redistributable's), checked by @ref VerifyDxntCabIntegrity
- *  before any FDI pass touches the file.
- *
- * @warning dxnt.cab is a fixed, known artifact, exactly like
- *  @ref kWantedFiles' exact sizes: this must never loosen to an
- *  existence check. A mismatch means the shipped cab is corrupt or has
- *  been tampered with, and extraction must not proceed: the allowlisted
- *  names in @ref kWantedFiles could otherwise overwrite the system
- *  directory with unverified content.
- */
-constexpr long long kDxntCabExpectedSize = 13264168;
-constexpr BYTE kDxntCabExpectedSha256[32] = {
+// dxnt.cab, the cabinet shipped next to this exe: the committed Feb-2010
+// DirectX redistributable's, a fixed, known artifact. Replacing it means
+// updating every constant below together.
+
+constexpr auto kDxntCabName = "dxnt.cab";
+
+// The cabinet's pinned identity must never loosen to an existence check: a
+// mismatch means the shipped cab is corrupt or has been tampered with, and
+// the names in kDxntCabPayload could otherwise overwrite the system directory
+// with unverified content.
+constexpr long long kDxntCabSize = 13264168;
+constexpr BYTE kDxntCabSha256[32] = {
     // @formatter:off
     0x82, 0x54, 0xBE, 0xB9, 0x72, 0x41, 0x39, 0xE0,
     0x15, 0x03, 0xEC, 0x65, 0xE7, 0x68, 0x2D, 0xA5,
@@ -55,9 +45,79 @@ constexpr BYTE kDxntCabExpectedSha256[32] = {
     // @formatter:on
 };
 
+/// One file inside the cabinet, by name and exact decompressed size.
+struct DxntCabMember
+{
+    LPCSTR name;
+    DWORD size;
+};
+
 /**
- * @brief One stream FDI can touch through its file callbacks, as a tagged
- *  struct.
+ * @brief The exact set of DirectPlay binaries an extraction produces:
+ *  nothing else leaves the cabinet, and a member that does not arrive fails
+ *  the extraction.
+ *
+ * @warning Extraction takes nothing beyond this list on purpose: that
+ *  cabinet also carries ancient Direct3D binaries that must never reach the
+ *  system directory.
+ *
+ * @note The sizes are the extraction-success oracle in
+ *  @ref VerifyExtractedFiles: anything else at those names (Wine's
+ *  differently-sized builtins, Windows' stand-ins, a failed write) is not
+ *  our DirectPlay.
+ */
+constexpr DxntCabMember kDxntCabPayload[] = {
+    {"dplaysvr.exe", 28160},
+    {"dplayx.dll", 230400},
+    {"dpmodemx.dll", 77824},
+    {"dpnet.dll", 723968},
+    {"dpnhpast.dll", 32768},
+    {"dpnhupnp.dll", 68096},
+    {"dpnsvr.exe", 16896},
+    {"dpwsockx.dll", 79360},
+};
+
+/// FDI's member names are plain ASCII, so widening is a cast per character.
+[[nodiscard]] std::wstring WidenAscii(const LPCSTR s)
+{
+    std::wstring out;
+    for (const char* p = s; *p; ++p)
+        out.push_back(static_cast<unsigned char>(*p));
+    return out;
+}
+
+/// ASCII folding only: the same answer on every machine and locale.
+[[nodiscard]] bool EqualsAsciiNoCase(const std::string_view lhs, const std::string_view rhs) noexcept
+{
+    const auto lower = [](const char ch) noexcept
+    {
+        return ch >= 'A' && ch <= 'Z' ? static_cast<char>(ch - 'A' + 'a') : ch;
+    };
+    return std::ranges::equal(
+        lhs,
+        rhs,
+        [&](const char a, const char b) noexcept
+        {
+            return lower(a) == lower(b);
+        }
+    );
+}
+
+[[nodiscard]] std::string Base16From(const std::span<const BYTE> bytes)
+{
+    static constexpr char kDigits[] = "0123456789abcdef";
+    std::string hex;
+    hex.reserve(bytes.size() * 2);
+    for (const BYTE byte : bytes)
+    {
+        hex.push_back(kDigits[byte >> 4]);
+        hex.push_back(kDigits[byte & 0x0F]);
+    }
+    return hex;
+}
+
+/**
+ * @brief One stream FDI can touch through its file callbacks.
  *
  * @note FDI's callbacks carry no user context pointer, only an
  *  @ref INT_PTR "handle", so every stream FDI can touch (the dxnt.cab
@@ -69,39 +129,29 @@ struct FdiStream
 {
     enum class Kind : std::uint8_t
     {
-        /// read-only view of dxnt.cab
         SourceFile,
-        /// real destination file (one of the final 8 binaries)
         SinkFile,
     };
 
     Kind kind = Kind::SourceFile;
-    /// logical position
     long long pos = 0;
-
-    /// @ref Kind::SourceFile / @ref Kind::SinkFile
     HANDLE hFile = INVALID_HANDLE_VALUE;
-    /// @ref Kind::SourceFile: dxnt.cab's size, for SEEK_END
+    /// @ref Kind::SourceFile only, for SEEK_END.
     long long size = 0;
 };
 
 /**
- * @brief Single-pass, single-threaded extraction state.
+ * @brief Single-pass, single-threaded extraction state: the dxnt.cab
+ *  stream and the folder @ref OnCopyFile writes into.
  *
  * @note @ref FdiOpen dispatches on a marker string to the pre-positioned
- *  source stream below rather than opening a real path (see
+ *  source stream rather than opening a real path (see
  *  @ref ExtractDirectPlayFiles); there is only ever one active pass, so
- *  one global context is enough.
+ *  globals are enough.
  */
-struct ExtractionContext
-{
-    FdiStream source;
-    std::wstring destDir;
-};
+FdiStream g_source;
+std::wstring g_destDir;
 
-ExtractionContext g_ctx;
-
-/// First Win32 error of the current extraction, see @ref FirstExtractionError.
 DWORD g_firstError = ERROR_SUCCESS;
 
 FNALLOC(FdiAlloc)
@@ -131,7 +181,7 @@ FNFREE(FdiFree)
  *  both would alias one @ref FdiStream::pos field between two
  *  logically-independent FDI read cursors, corrupting whichever one runs
  *  behind. So every @ref FNOPEN call gets its OWN stream instance (own
- *  `pos`, starting at 0), copied from the template in @ref g_ctx; the
+ *  `pos`, starting at 0), copied from the template in @ref g_source; the
  *  underlying Win32 file handle is shared (safe, since every read
  *  explicitly seeks first) but owned and closed only once, by
  *  @ref ExtractDirectPlayFiles, not by @ref FdiClose.
@@ -143,8 +193,8 @@ FNOPEN(FdiOpen)
 
     auto* s = new FdiStream{};
     s->kind = FdiStream::Kind::SourceFile;
-    s->hFile = g_ctx.source.hFile;
-    s->size = g_ctx.source.size;
+    s->hFile = g_source.hFile;
+    s->size = g_source.size;
     return reinterpret_cast<INT_PTR>(s);
 }
 
@@ -244,7 +294,7 @@ FNSEEK(FdiSeek)
         switch (s->kind)
         {
         case FdiStream::Kind::SourceFile:
-            newPos = s->size + dist; // SEEK_END is relative to dxnt.cab's own size
+            newPos = s->size + dist;
             break;
         default:
             newPos = s->pos + dist;
@@ -260,16 +310,13 @@ FNSEEK(FdiSeek)
     return static_cast<long>(newPos);
 }
 
-/**
- * @brief @ref fdintCOPY_FILE: decides whether to accept a cabinet member
- *  and, if so, hands back the stream that will receive it. Accepts only
- *  @ref kWantedFiles.
- */
+/// @ref fdintCOPY_FILE: 0 skips the member, anything else is the stream that
+/// receives it.
 INT_PTR OnCopyFile(const PFDINOTIFICATION pfdin)
 {
     const bool wanted = std::ranges::any_of(
-        kWantedFiles,
-        [&](const WantedFile& w)
+        kDxntCabPayload,
+        [&](const DxntCabMember& w)
         {
             return EqualsAsciiNoCase(pfdin->psz1, w.name);
         }
@@ -279,7 +326,7 @@ INT_PTR OnCopyFile(const PFDINOTIFICATION pfdin)
 
     const auto psz1 = pfdin->psz1;
     const std::wstring fileName = WidenAscii(psz1);
-    const std::wstring destPath = g_ctx.destDir + L"\\" + fileName;
+    const std::wstring destPath = g_destDir + L"\\" + fileName;
 
     // Clear the destination so CREATE_ALWAYS writes a fresh regular file:
     // never write *through* an existing entry. On Wine/Proton the system
@@ -294,7 +341,7 @@ INT_PTR OnCopyFile(const PFDINOTIFICATION pfdin)
     {
         SetFileAttributesW(destPath.c_str(), FILE_ATTRIBUTE_NORMAL);
         if (!DeleteFileW(destPath.c_str()))
-            UnixRemoveEntry(g_ctx.destDir, fileName);
+            UnixRemoveEntry(g_destDir, fileName);
     }
     if (GetFileAttributesW(destPath.c_str()) != INVALID_FILE_ATTRIBUTES)
     {
@@ -337,20 +384,6 @@ INT_PTR OnCopyFile(const PFDINOTIFICATION pfdin)
     return reinterpret_cast<INT_PTR>(s);
 }
 
-/**
- * @brief @ref fdintCLOSE_FILE_INFO: finalizes a destination stream handed
- *  out by @ref OnCopyFile.
- */
-BOOL OnCloseFileInfo(const PFDINOTIFICATION pfdin)
-{
-    const auto* s = reinterpret_cast<FdiStream*>(pfdin->hf);
-    if (s->kind == FdiStream::Kind::SinkFile)
-        CloseHandle(s->hFile);
-    delete s;
-    return TRUE;
-}
-
-/// Dispatches the few FDI notifications this extraction cares about.
 FNFDINOTIFY(FdiNotify)
 {
     switch (fdint)
@@ -359,7 +392,13 @@ FNFDINOTIFY(FdiNotify)
         return OnCopyFile(pfdin);
 
     case fdintCLOSE_FILE_INFO:
-        return OnCloseFileInfo(pfdin) ? TRUE : FALSE;
+    {
+        const auto* s = reinterpret_cast<FdiStream*>(pfdin->hf);
+        if (s->kind == FdiStream::Kind::SinkFile)
+            CloseHandle(s->hFile);
+        delete s;
+        return TRUE;
+    }
 
     case fdintNEXT_CABINET:
         return -1; // dxnt.cab is never split across volumes
@@ -369,24 +408,17 @@ FNFDINOTIFY(FdiNotify)
     }
 }
 
-/**
- * @brief Verifies dxnt.cab is byte-for-byte the committed artifact
- *  (exact size, then SHA-256) before any FDI pass touches it.
- *
- * @note Cheap fields first: a size mismatch skips the hash entirely.
- *  @ref FdiRead always seeks to an absolute position before reading, so
- *  hashing the whole file here does not need to rewind the handle
- *  afterward.
- */
+/// @ref FdiRead always seeks to an absolute position before reading, so
+/// hashing the whole file here does not need to rewind the handle afterward.
 [[nodiscard]] bool VerifyDxntCabIntegrity(const HANDLE hCab, const long long fileSize)
 {
-    if (fileSize != kDxntCabExpectedSize)
+    if (fileSize != kDxntCabSize)
     {
         LOG(
             "VerifyDxntCabIntegrity('{}') -> size mismatch, {} bytes, expected {}",
             kDxntCabName,
             fileSize,
-            kDxntCabExpectedSize
+            kDxntCabSize
         );
 
         return false;
@@ -491,10 +523,10 @@ FNFDINOTIFY(FdiNotify)
         return false;
     }
 
-    if (std::memcmp(digest, kDxntCabExpectedSha256, sizeof(digest)) != 0)
+    if (std::memcmp(digest, kDxntCabSha256, sizeof(digest)) != 0)
     {
-        const std::string sha256 = Base16FromBytes(digest);
-        const std::string expected = Base16FromBytes(kDxntCabExpectedSha256);
+        const std::string sha256 = Base16From(digest);
+        const std::string expected = Base16From(kDxntCabSha256);
         LOG(
             "VerifyDxntCabIntegrity('{}') -> SHA-256 mismatch, got {}, expected {}",
             kDxntCabName,
@@ -509,18 +541,11 @@ FNFDINOTIFY(FdiNotify)
 }
 } // namespace
 
-std::wstring WidenAscii(const LPCSTR s)
+ExtractResult ExtractDirectPlayFiles(const std::wstring& exeDir, const std::wstring& destDir)
 {
-    std::wstring out;
-    for (const char* p = s; *p; ++p)
-        out.push_back(static_cast<unsigned char>(*p));
-    return out;
-}
+    g_firstError = ERROR_SUCCESS;
 
-ExtractResult ExtractDirectPlayFiles(const std::wstring& dxntCabPath, const std::wstring& destDir)
-{
-    // PFNCLOSE only frees per-open stream wrappers (see FdiClose); the
-    // underlying dxnt.cab file handle is owned here.
+    const std::wstring dxntCabPath = exeDir + L"\\" + WidenAscii(kDxntCabName);
     const UniqueHandle hCab(
         CreateFileW(
             dxntCabPath.c_str(),
@@ -558,12 +583,26 @@ ExtractResult ExtractDirectPlayFiles(const std::wstring& dxntCabPath, const std:
     if (!VerifyDxntCabIntegrity(hCab.Get(), fileSize.QuadPart))
         return ExtractResult::Fatal;
 
-    g_ctx = ExtractionContext{};
-    g_ctx.destDir = destDir;
+    std::error_code ec;
+    std::filesystem::create_directories(destDir, ec);
+    if (ec)
+    {
+        // The value of an MSVC filesystem error is the Win32 error code.
+        g_firstError = static_cast<DWORD>(ec.value());
+        LOG(
+            "create_directories('{}') -> error {}",
+            Utf8FromWide(destDir),
+            g_firstError
+        );
+        return ExtractResult::Failed;
+    }
 
-    g_ctx.source.kind = FdiStream::Kind::SourceFile;
-    g_ctx.source.hFile = hCab.Get();
-    g_ctx.source.size = fileSize.QuadPart;
+    g_destDir = destDir;
+    g_source = FdiStream{
+        .kind = FdiStream::Kind::SourceFile,
+        .hFile = hCab.Get(),
+        .size = fileSize.QuadPart,
+    };
 
     ERF erf{};
     const auto hFdi = FDICreate(
@@ -608,38 +647,6 @@ ExtractResult ExtractDirectPlayFiles(const std::wstring& dxntCabPath, const std:
     return ok ? ExtractResult::Ok : ExtractResult::Failed;
 }
 
-ExtractResult RunExtractionPipeline(const std::wstring& exeDir, const std::wstring& destDir)
-{
-    const std::wstring cabPath = exeDir + L"\\" + WidenAscii(kDxntCabName);
-    if (GetFileAttributesW(cabPath.c_str()) == INVALID_FILE_ATTRIBUTES)
-    {
-        const DWORD error = GetLastError();
-        LOG(
-            "GetFileAttributesW('{}') -> error {}",
-            Utf8FromWide(cabPath),
-            error
-        );
-        return ExtractResult::Failed;
-    }
-
-    g_firstError = ERROR_SUCCESS;
-    std::error_code ec;
-    std::filesystem::create_directories(destDir, ec);
-    if (ec)
-    {
-        // The value of an MSVC filesystem error is the Win32 error code.
-        g_firstError = static_cast<DWORD>(ec.value());
-        LOG(
-            "create_directories('{}') -> error {}",
-            Utf8FromWide(destDir),
-            g_firstError
-        );
-        return ExtractResult::Failed;
-    }
-
-    return ExtractDirectPlayFiles(cabPath, destDir);
-}
-
 DWORD FirstExtractionError() noexcept
 {
     return g_firstError;
@@ -647,7 +654,7 @@ DWORD FirstExtractionError() noexcept
 
 bool VerifyExtractedFiles(const std::wstring& destDir)
 {
-    for (const auto& [name, expectedSize] : kWantedFiles)
+    for (const auto& [name, expectedSize] : kDxntCabPayload)
     {
         const std::wstring path = destDir + L"\\" + WidenAscii(name);
         WIN32_FILE_ATTRIBUTE_DATA info{};
@@ -676,7 +683,7 @@ bool VerifyExtractedFiles(const std::wstring& destDir)
             return false;
         }
     }
-    constexpr auto cFiles = std::size(kWantedFiles);
+    constexpr auto cFiles = std::size(kDxntCabPayload);
     LOG(
         "VerifyExtractedFiles('{}') -> all {} native binaries present",
         Utf8FromWide(destDir),

@@ -1,28 +1,32 @@
-/// @file
-/// What makes an extracted DirectPlay win in a Wine/Proton prefix: marking
-/// the extracted binaries native-first (DLL overrides + in-process COM
-/// registration) so the prefix picks them up over its own builtins, and
-/// removing a system-directory entry at the Unix level where Win32 cannot.
-/// `main.cpp`'s @ref RunInstallMode calls these after a verified extraction.
-
 #include <Windows.h>
 #include <olectl.h>
 
+#include <chrono>
 #include <iterator>
 #include <string>
 #include <string_view>
 #include <vector>
 
-#include "duration.h"
+#include "casts.h"
 #include "encoding.h"
 #include "log.h"
-#include "module_handle.h"
+#include "proc_address.h"
 #include "unique_resource.h"
 
 #include "steps.h"
 
+using namespace std::literals::chrono_literals;
+
 namespace
 {
+/// The whole milliseconds a Win32 timeout parameter (a `DWORD`) takes. A
+/// coarser unit converts implicitly; a finer one needs an explicit
+/// `duration_cast` at the call, where the truncation is visible.
+[[nodiscard]] constexpr DWORD MillisecondsFrom(const std::chrono::milliseconds duration) noexcept
+{
+    return saturate_cast<DWORD>(duration.count());
+}
+
 /**
  * @brief Wine DLL-override value names for the extracted binaries, plus
  *  `dplay`: Wine has a builtin `dplay.dll` too, so a game that carries its
@@ -45,23 +49,16 @@ constexpr LPCWSTR kDllOverrideNames[] = {
     L"dpwsockx",
 };
 
-/**
- * @brief The subset of @ref kWantedFiles exposing COM servers that
- *  @ref RegisterWineComServers needs to register.
- */
 constexpr LPCWSTR kComRegisterDlls[] = {
     L"dplayx.dll",
     L"dpnet.dll",
     L"dpnhpast.dll",
     L"dpnhupnp.dll",
 };
-} // namespace
 
-namespace
-{
 using GetUnixFileNameFn = char* (__cdecl*)(LPCWSTR);
 
-/// Wine's `wine_get_unix_file_name`, or null on a real Windows.
+/// Null off Wine.
 [[nodiscard]] GetUnixFileNameFn ResolveGetUnixFileName() noexcept
 {
     const HMODULE hK32 = GetModuleHandleW(L"kernel32.dll");
@@ -80,7 +77,7 @@ bool UnixRemoveEntry(const std::wstring& dir, const std::wstring& fileName)
 {
     const auto pGetUnixName = ResolveGetUnixFileName();
     if (!pGetUnixName)
-        return false; // not Wine: nothing to unlink
+        return false;
 
     char* unixDir = pGetUnixName(dir.c_str());
     if (!unixDir)
@@ -125,8 +122,9 @@ bool UnixRemoveEntry(const std::wstring& dir, const std::wstring& fileName)
         return false;
     }
     {
-        const UniqueProcessInformation process(pi);
-        WaitForSingleObject(process.m_hProcess.Get(), MillisecondsFrom(5s));
+        const UniqueHandle process(pi.hProcess);
+        const UniqueHandle thread(pi.hThread);
+        WaitForSingleObject(process.Get(), MillisecondsFrom(5s));
     }
 
     // start.exe /unix returns before its Unix child finishes, and we can't
@@ -152,15 +150,8 @@ bool UnixRemoveEntry(const std::wstring& dir, const std::wstring& fileName)
     return false;
 }
 
-/**
- * @brief Marks the extracted binaries (@ref kDllOverrideNames) as
- *  native-first in the Wine registry. Install mode only.
- *
- * @warning Overrides must precede registration
- *  (@ref RegisterWineComServers) so the DLLs we call
- *  @ref DllRegisterServer on get loaded as the native binaries we just
- *  extracted, rather than Wine's builtins.
- */
+namespace
+{
 void ApplyWineDllOverrides()
 {
     UniqueKey key;
@@ -215,17 +206,11 @@ void ApplyWineDllOverrides()
     );
 }
 
-/**
- * @brief Registers the extracted COM servers (@ref kComRegisterDlls)
- *  in-process. Install mode only.
- *
- * @note In-process @ref DllRegisterServer works here because everything
- *  involved (this exe, the extracted DLLs) is 32-bit, like us. Loading
- *  by full system-directory path with @ref LOAD_WITH_ALTERED_SEARCH_PATH
- *  is what guarantees we pick up the native DLL (and its extracted
- *  siblings) we just placed there, not a `dplayx.dll` of the game's own
- *  that an ordinary @ref LoadLibrary search order might find first.
- */
+/// In-process @ref DllRegisterServer works because this exe and the
+/// extracted DLLs are all 32-bit. Loading by full system-directory path with
+/// @ref LOAD_WITH_ALTERED_SEARCH_PATH picks up the native DLL (and its
+/// extracted siblings) just placed there, not a `dplayx.dll` of the game's
+/// own that an ordinary search order might find first.
 void RegisterWineComServers(const std::wstring& destDir)
 {
     for (const auto dll : kComRegisterDlls)
@@ -240,8 +225,6 @@ void RegisterWineComServers(const std::wstring& destDir)
         );
         if (!library)
         {
-            // Continues past individual failures: a single missing COM server
-            // here isn't fatal.
             LOG(
                 "LoadLibraryExW('{}') -> error {}",
                 Utf8FromWide(fullPath),
@@ -271,4 +254,13 @@ void RegisterWineComServers(const std::wstring& destDir)
             );
         }
     }
+}
+} // namespace
+
+void PreferExtractedDirectPlay(const std::wstring& sysDir)
+{
+    // Overrides first, so the DLLs whose DllRegisterServer runs load as the
+    // native binaries just extracted rather than Wine's builtins.
+    ApplyWineDllOverrides();
+    RegisterWineComServers(sysDir);
 }
