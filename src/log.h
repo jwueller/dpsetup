@@ -4,6 +4,8 @@
 /// The run's record: one UTF-8 line per message in a file next to the exe,
 /// and the same line on the parent console when there is one.
 
+// Declares std::format, which only LOG's expansion uses.
+// ReSharper disable once CppUnusedIncludeDirective
 #include <format>
 #include <string>
 #include <string_view>

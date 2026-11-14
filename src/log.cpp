@@ -8,13 +8,13 @@
 
 namespace
 {
-HANDLE g_hLog = INVALID_HANDLE_VALUE;
+auto g_hLog = INVALID_HANDLE_VALUE;
 
 // Set only when a parent console exists: a double-click and the Steam
 // install-script launch stay windowless (never AllocConsole). Redirection is
 // deliberately not served: scripts get the exit code and dpsetup.log, the
 // console is a nicety for a human at a terminal.
-HANDLE g_hConsole = INVALID_HANDLE_VALUE;
+auto g_hConsole = INVALID_HANDLE_VALUE;
 } // namespace
 
 void LogOpen(const std::wstring& path) noexcept
@@ -97,9 +97,10 @@ void LogWrite(const std::string_view message) noexcept
             );
         }
     }
+    // A record that cannot be built is dropped; logging never affects the
+    // caller.
+    // NOLINTNEXTLINE(bugprone-empty-catch)
     catch (...)
     {
-        // A record that cannot be built is dropped; logging never affects the
-        // caller.
     }
 }

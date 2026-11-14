@@ -19,11 +19,10 @@ namespace
 /// Empty on failure.
 [[nodiscard]] std::wstring GetOwnPath()
 {
-    constexpr DWORD cchMax = 32768;
-
     std::wstring path(MAX_PATH, L'\0');
     while (true)
     {
+        constexpr DWORD cchMax = 32768;
         const auto cchBuffer = static_cast<DWORD>(path.size());
         const DWORD cchPath = GetModuleFileNameW(
             nullptr,
@@ -36,6 +35,9 @@ namespace
         if (cchPath < cchBuffer)
         {
             path.resize(cchPath);
+            // The failure paths return a fresh empty string, so this one
+            // moves instead of eliding; once per run.
+            // NOLINTNEXTLINE(clang-diagnostic-nrvo)
             return path;
         }
 
@@ -204,11 +206,12 @@ FARPROC WINAPI LoadDelayedFromSystemDirectory(
     if (hModule == nullptr)
     {
         std::array<char, MAX_PATH> path{};
-        const UINT cchDirectory = GetSystemDirectoryA(path.data(), path.size());
-        if (cchDirectory != 0 && cchDirectory < path.size())
+        if (const UINT cchDirectory =
+                GetSystemDirectoryA(path.data(), path.size());
+            cchDirectory != 0 && cchDirectory < path.size())
         {
             const std::string fullPath =
-                std::string(path.data(), cchDirectory) + "\\" + pdli->szDll;
+                std::string(path.data()) + "\\" + pdli->szDll;
             hModule = LoadLibraryExA(
                 fullPath.c_str(),
                 nullptr,
@@ -224,10 +227,10 @@ extern "C" const PfnDliHook __pfnDliNotifyHook2 =
     LoadDelayedFromSystemDirectory;
 
 int WINAPI wWinMain(
-    _In_ HINSTANCE hInstance,
-    _In_opt_ HINSTANCE hPrevInstance,
-    _In_ LPWSTR lpCmdLine,
-    _In_ int nShowCmd
+    _In_ const HINSTANCE hInstance,
+    _In_opt_ const HINSTANCE hPrevInstance,
+    _In_ const LPWSTR lpCmdLine,
+    _In_ const int nShowCmd
 )
 {
     (void)hInstance;
@@ -256,8 +259,7 @@ int WINAPI wWinMain(
 
     if (!extractionMode)
     {
-        int relaunchExitCode = 1;
-        if (RelaunchElevated(relaunchExitCode))
+        if (int relaunchExitCode = 1; RelaunchElevated(relaunchExitCode))
             return relaunchExitCode;
 
         const DWORD exitCode = RunInstallMode(exeDir);

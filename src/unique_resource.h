@@ -65,8 +65,7 @@ public:
 
     void Reset(const T value = {}) noexcept
     {
-        const T old = std::exchange(m_value, value);
-        if (IsValid(old))
+        if (const T old = std::exchange(m_value, value); IsValid(old))
             (void)fnClose(old);
     }
 

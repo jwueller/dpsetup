@@ -11,8 +11,9 @@
  *  cast from it is what `cast-function-type-strict` flags, and the calling
  *  convention it appears to assert is not one a cast could change; a detour
  *  through `void*` trades that for `bugprone-casting-through-void`.
- *  @ref std::bit_cast is neither: two pointers of one width, bits
- *  reinterpreted, which is all the loader ever promised. Prefer
+ *  @ref std::bit_cast says what happens: two pointers of one width, bits
+ *  reinterpreted, which is all the loader ever promised. Every spelling
+ *  trips one check, so the one for this spelling is suppressed. Prefer
  *  @ref PROC_ADDRESS_OF, which takes the type from the declaration.
  */
 template <typename Pfn>
@@ -25,6 +26,7 @@ template <typename Pfn>
     _In_z_ const char* const lpszProcName
 ) noexcept
 {
+    // NOLINTNEXTLINE(bugprone-bitwise-pointer-cast)
     return std::bit_cast<Pfn>(GetProcAddress(hModule, lpszProcName));
 }
 

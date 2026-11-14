@@ -89,12 +89,12 @@ bool UnixRemoveEntry(const std::wstring& dir, const std::wstring& fileName)
     HeapFree(GetProcessHeap(), 0, unixDir);
 
     WCHAR sysDir[MAX_PATH];
-    const UINT n = GetSystemDirectoryW(sysDir, MAX_PATH);
-    if (n == 0 || n >= MAX_PATH)
+    if (const UINT n = GetSystemDirectoryW(sysDir, MAX_PATH);
+        n == 0 || n >= MAX_PATH)
         return false;
 
     // Wine runs a native Unix program via start.exe /unix.
-    const std::wstring startExe = std::wstring(sysDir, n) + L"\\start.exe";
+    const std::wstring startExe = std::wstring(sysDir) + L"\\start.exe";
     const std::wstring cmd = L"\"" + startExe + L"\" /unix /bin/rm -f \""
         + WideFromUtf8(unixPath) + L"\"";
     std::vector cmdBuf(cmd.begin(), cmd.end());
@@ -166,15 +166,15 @@ void ApplyWineDllOverrides()
         LOG(
             "RegCreateKeyExW(HKCU, {:?}) -> HRESULT{{0x{:08X}}}",
             Utf8FromWide(lpSubKey),
-            static_cast<unsigned>(HRESULT_FROM_WIN32(lStatus))
+            static_cast<unsigned>(HRESULT_FROM_WIN32(static_cast<DWORD>(lStatus)))
         );
         return;
     }
 
-    constexpr WCHAR kOverrideValue[] = L"native,builtin";
     int written = 0;
     for (const auto name : kDllOverrideNames)
     {
+        constexpr WCHAR kOverrideValue[] = L"native,builtin";
         const LSTATUS setStatus = RegSetValueExW(
             key.Get(),
             name,

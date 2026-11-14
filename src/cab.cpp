@@ -35,7 +35,7 @@ constexpr auto kDxntCabName = "dxnt.cab";
 // mismatch means the shipped cab is corrupt or has been tampered with, and
 // the names in kDxntCabPayload could otherwise overwrite the system directory
 // with unverified content.
-constexpr long long kDxntCabSize = 13264168;
+constexpr LONGLONG kDxntCabSize = 13264168;
 constexpr BYTE kDxntCabSha256[32] = {
     // @formatter:off
     0x82, 0x54, 0xBE, 0xB9, 0x72, 0x41, 0x39, 0xE0,
@@ -67,14 +67,16 @@ struct DxntCabMember
  *  our DirectPlay.
  */
 constexpr DxntCabMember kDxntCabPayload[] = {
-    {"dplaysvr.exe", 28160},
-    {"dplayx.dll", 230400},
-    {"dpmodemx.dll", 77824},
-    {"dpnet.dll", 723968},
-    {"dpnhpast.dll", 32768},
-    {"dpnhupnp.dll", 68096},
-    {"dpnsvr.exe", 16896},
-    {"dpwsockx.dll", 79360},
+    // @formatter:off
+    {.name = "dplaysvr.exe", .size =  28160},
+    {.name = "dplayx.dll",   .size = 230400},
+    {.name = "dpmodemx.dll", .size =  77824},
+    {.name = "dpnet.dll",    .size = 723968},
+    {.name = "dpnhpast.dll", .size =  32768},
+    {.name = "dpnhupnp.dll", .size =  68096},
+    {.name = "dpnsvr.exe",   .size =  16896},
+    {.name = "dpwsockx.dll", .size =  79360},
+    // @formatter:on
 };
 
 /// FDI's member names are plain ASCII, so widening is a cast per character.
@@ -137,10 +139,10 @@ struct FdiStream
     };
 
     Kind kind = Kind::SourceFile;
-    long long pos = 0;
+    long pos = 0;
     HANDLE hFile = INVALID_HANDLE_VALUE;
     /// @ref Kind::SourceFile only, for SEEK_END.
-    long long size = 0;
+    long size = 0;
 };
 
 /**
@@ -191,6 +193,11 @@ FNFREE(FdiFree)
  */
 FNOPEN(FdiOpen)
 {
+    // The marker always names the read-only source stream; FDI's CRT-style
+    // open flags have nothing to select.
+    (void)oflag;
+    (void)pmode;
+
     if (std::strcmp(pszFile, "*cab*") != 0)
         return -1;
 
@@ -203,8 +210,7 @@ FNOPEN(FdiOpen)
 
 FNREAD(FdiRead)
 {
-    auto* s = reinterpret_cast<FdiStream*>(hf);
-    switch (s->kind)
+    switch (auto* s = reinterpret_cast<FdiStream*>(hf); s->kind)
     {
     case FdiStream::Kind::SourceFile:
     {
@@ -217,7 +223,7 @@ FNREAD(FdiRead)
         if (!ReadFile(s->hFile, pv, cb, &read, nullptr))
             return static_cast<UINT>(-1);
 
-        s->pos += read;
+        s->pos += static_cast<long>(read);
         return read;
     }
 
@@ -228,20 +234,18 @@ FNREAD(FdiRead)
 
 FNWRITE(FdiWrite)
 {
-    auto* s = reinterpret_cast<FdiStream*>(hf);
-    switch (s->kind)
+    switch (auto* s = reinterpret_cast<FdiStream*>(hf); s->kind)
     {
     case FdiStream::Kind::SinkFile:
     {
         DWORD written = 0;
-        const HANDLE hFile = s->hFile;
-        if (!WriteFile(hFile, pv, cb, &written, nullptr))
+        if (!WriteFile(s->hFile, pv, cb, &written, nullptr))
         {
             const DWORD error = GetLastError();
             LOG("WriteFile({} bytes) -> error {}", cb, error);
             return static_cast<UINT>(-1);
         }
-        s->pos += written;
+        s->pos += static_cast<long>(written);
         return written;
     }
 
@@ -272,7 +276,7 @@ FNSEEK(FdiSeek)
 {
     auto* s = reinterpret_cast<FdiStream*>(hf);
 
-    long long newPos;
+    long newPos;
     switch (seektype)
     {
     case SEEK_SET:
@@ -300,7 +304,7 @@ FNSEEK(FdiSeek)
     }
 
     s->pos = newPos;
-    return static_cast<long>(newPos);
+    return newPos;
 }
 
 /// @ref fdintCOPY_FILE: 0 skips the member, anything else is the stream that
@@ -398,7 +402,7 @@ FNFDINOTIFY(FdiNotify)
 /// hashing the whole file here does not need to rewind the handle afterward.
 [[nodiscard]] bool VerifyDxntCabIntegrity(
     const HANDLE hCab,
-    const long long fileSize
+    const LONGLONG fileSize
 )
 {
     if (fileSize != kDxntCabSize)
@@ -447,7 +451,7 @@ FNFDINOTIFY(FdiNotify)
             static_cast<unsigned>(createStatus)
         );
 
-        BCryptCloseAlgorithmProvider(hAlg, 0);
+        (void)BCryptCloseAlgorithmProvider(hAlg, 0);
         return false;
     }
 
@@ -476,8 +480,8 @@ FNFDINOTIFY(FdiNotify)
     if (BCryptFinishHash(hHash, digest, sizeof(digest), 0) != 0)
         ok = false;
 
-    BCryptDestroyHash(hHash);
-    BCryptCloseAlgorithmProvider(hAlg, 0);
+    (void)BCryptDestroyHash(hHash);
+    (void)BCryptCloseAlgorithmProvider(hAlg, 0);
 
     if (!ok)
     {
@@ -565,7 +569,7 @@ ExtractResult ExtractDirectPlayFiles(
     g_source = FdiStream{
         .kind = FdiStream::Kind::SourceFile,
         .hFile = hCab.Get(),
-        .size = fileSize.QuadPart,
+        .size = static_cast<long>(fileSize.QuadPart),
     };
 
     ERF erf{};

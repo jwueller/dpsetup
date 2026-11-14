@@ -44,6 +44,8 @@ enum DismPackageFeatureState
 /// they are read.
 struct DismFeatureInfo
 {
+    // Never read; declared to place FeatureState at its offset.
+    // ReSharper disable once CppDeclaratorNeverUsed
     PCWSTR FeatureName;
     DismPackageFeatureState FeatureState;
 };
@@ -60,6 +62,8 @@ using DISM_PROGRESS_CALLBACK = void(CALLBACK*)(
     PVOID UserData
 );
 
+// Declarations only, for PROC_ADDRESS_OF; dismapi.dll implements them.
+// ReSharper disable CppFunctionIsNotImplemented
 HRESULT WINAPI DismInitialize(
     DismLogLevel LogLevel,
     PCWSTR LogFilePath,
@@ -102,6 +106,7 @@ HRESULT WINAPI DismGetFeatureInfo(
 HRESULT WINAPI DismGetLastErrorMessage(DismString** ErrorMessage);
 
 HRESULT WINAPI DismDelete(VOID* DismStructure);
+// ReSharper restore CppFunctionIsNotImplemented
 
 /// `DISM_ONLINE_IMAGE`: the running Windows installation.
 inline constexpr auto kDismOnlineImage =
@@ -129,9 +134,9 @@ constexpr LPCSTR NameFromFeatureState(
         return "Superseded";
     case DismStatePartiallyInstalled:
         return "PartiallyInstalled";
-    default:
-        return "?";
     }
+    // DISM may report a state newer than this declaration.
+    return "?";
 }
 } // namespace
 
