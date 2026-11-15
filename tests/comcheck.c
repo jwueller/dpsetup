@@ -55,7 +55,7 @@ int main(void)
         return 1;
     }
 
-    for (size_t i = 0; i < sizeof(kClasses) / sizeof(kClasses[0]); ++i)
+    for (size_t i = 0; i < ARRAYSIZE(kClasses); ++i)
     {
         CLSID clsid;
         IUnknown* pUnknown = NULL;
