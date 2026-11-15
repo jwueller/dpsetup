@@ -51,8 +51,14 @@ done
 checker="$(mktemp -d)/comcheck.exe"
 i686-w64-mingw32-gcc -O2 -Wall -static-libgcc \
     -o "$checker" "$(dirname "$0")/comcheck.c" -lole32 -luuid
+report="$(dirname "$checker")/comcheck.log"
 set -x
-run "$checker"
+run "$checker" || true
 { set +x; } 2>/dev/null
+echo
+sed 's/^/  /' "$report"
+echo
+[ "$(tail -n 1 "$report")" = 'all native' ] ||
+    { echo 'DirectPlay classes are not served by the native DLLs'; exit 1; }
 
 echo 'Prefix checks passed'

@@ -1,7 +1,9 @@
 /*
  * Creates one DirectPlay class per DLL and reports which DLL served it:
  * Wine's builtin or the native copy dpsetup installed. Run inside the
- * prefix; exits 0 only when every class was created from a native DLL.
+ * prefix. The report goes to comcheck.log beside the exe and ends with
+ * "all native" only when every class was created from a native DLL: Proton
+ * passes on neither the console output nor, verifiably, the exit code.
  * The registry cannot tell the two apart: Wine registers its builtins under
  * the same class IDs and the same paths.
  */
@@ -28,11 +30,26 @@ static const struct
 
 int main(void)
 {
+    char path[MAX_PATH];
+    const DWORD cchPath = GetModuleFileNameA(NULL, path, MAX_PATH);
+    char* const slash = strrchr(path, '\\');
+    if (cchPath == 0 || cchPath >= MAX_PATH || !slash)
+        return 1;
+    strcpy(slash + 1, "comcheck.log");
+    FILE* const report = fopen(path, "w");
+    if (!report)
+        return 1;
+
     int failures = 0;
     const HRESULT hrInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
     if (FAILED(hrInit))
     {
-        printf("CoInitializeEx -> HRESULT 0x%08lX\n", (unsigned long)hrInit);
+        fprintf(
+            report,
+            "CoInitializeEx -> HRESULT 0x%08lX\nFAILED\n",
+            (unsigned long)hrInit
+        );
+        fclose(report);
         return 1;
     }
 
@@ -64,7 +81,8 @@ int main(void)
             origin = builtin ? "builtin" : "native";
         }
 
-        printf(
+        fprintf(
+            report,
             "%ls (%s) -> HRESULT 0x%08lX, %s\n",
             kClasses[i].clsid,
             kClasses[i].dll,
@@ -78,5 +96,7 @@ int main(void)
     }
 
     CoUninitialize();
+    fputs(failures == 0 ? "all native\n" : "FAILED\n", report);
+    fclose(report);
     return failures == 0 ? 0 : 1;
 }
