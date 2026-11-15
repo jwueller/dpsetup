@@ -2,10 +2,10 @@
 
 Microsoft's _DirectPlay_ has been deprecated and is no longer installed and/or enabled on modern Windows. `dpsetup` is a small utility that installs, registers and enables it from the official redistributable files, or just extracts them to a specified directory.
 
-- Silent via `/quiet`
 - Validates redistributable input file
 - Signed via code signing certificate to meet [SmartScreen](https://learn.microsoft.com/en-us/windows/security/operating-system-security/virus-and-threat-protection/microsoft-defender-smartscreen/) requirements
-- Offline
+- Supports silent operation
+- No internet connection required
 - Works under Wine/Proton
 
 Originally written for [DirectRetrofit](https://retrofit.games) v1.x, and turned into a standalone utility for posterity. DirectRetrofit v2.x or greater no longer depends on Microsoft's _DirectPlay_ implementation, but will coexist with it.
@@ -16,7 +16,7 @@ Build and contribution instructions can be found there as well: https://github.c
 
 ## Installation
 
-```
+```bat
 dpsetup.exe [/install|/repair] [/quiet|/passive] [/norestart] [/log <file>]
 ```
 
@@ -30,7 +30,7 @@ Exits with a non-zero exit code if _DirectPlay_ cannot be made available. Consul
 
 ## Extraction
 
-```
+```bat
 dpsetup.exe [/extract] [/quiet|/passive] [/norestart] [/log <file>] <target-path>
 ```
 
