@@ -40,8 +40,31 @@ jobs:
           ''
           Get-Content (Join-Path $exe.DirectoryName dpsetup.log) | ForEach-Object { "  $_" }
           ''
-          Get-ChildItem $target
           if ($p.ExitCode -ne 0) { throw "dpsetup.exe exited with $($p.ExitCode)" }
+
+          # Against the README's list of extracted files, the only copy of
+          # their checksums.
+          $readme = Get-Content README.md -Raw
+          if ($readme -notmatch '(?s)extracts from `dxnt\.cab` are:\s*```sha256sums\r?\n(.*?)```') {
+            throw "README.md has no sha256sums block after 'extracts from dxnt.cab are:'"
+          }
+          $expected = @{}
+          foreach ($line in $Matches[1] -split '\r?\n' | Where-Object { $_ -match '^[0-9a-f]{64}  \S' }) {
+            $hash, $name = $line -split '  ', 2
+            $expected[$name] = $hash
+          }
+          $actual = @{}
+          foreach ($file in Get-ChildItem $target -File) {
+            $actual[$file.Name] = (Get-FileHash $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          }
+          foreach ($name in $expected.Keys | Sort-Object) {
+            "$($actual[$name] -eq $expected[$name] ? 'ok      ' : 'MISMATCH') $name"
+          }
+          $extra = $actual.Keys | Where-Object { -not $expected.ContainsKey($_) }
+          if ($extra) { throw "unexpected files: $($extra -join ', ')" }
+          if (@($expected.Keys | Where-Object { $actual[$_] -ne $expected[$_] }).Count) {
+            throw 'extracted files differ from README.md'
+          }
 
       # Unarchived, so the release zip is the artifact rather than a zip
       # inside the zip that an artifact otherwise is. download-artifact
@@ -88,7 +111,7 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends wine wine32:i386 wine64
+          sudo apt-get install -y --no-install-recommends wine wine32:i386 wine64 gcc-mingw-w64-i686
       - name: Find the exe
         run: echo "EXE=$(find "$RUNNER_TEMP/artifact" -name dpsetup.exe)" >> "$GITHUB_ENV"
       # In the default prefix, which the install test never touches.
@@ -124,6 +147,10 @@ jobs:
           proton=$(find "$RUNNER_TEMP" -maxdepth 1 -type d -name 'GE-Proton*')
           cat "$proton/version"
           echo "PROTON=$proton" >> "$GITHUB_ENV"
+      - name: Install the COM checker's compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-mingw-w64-i686
       - name: Find the exe
         run: echo "EXE=$(find "$RUNNER_TEMP/artifact" -name dpsetup.exe)" >> "$GITHUB_ENV"
       # In a prefix of its own, which the install test never touches.

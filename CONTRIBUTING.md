@@ -38,7 +38,10 @@ which are elevated and ship with DirectPlay disabled
 (`tests/install-windows.ps1`), and the extraction route in a fresh prefix
 of both plain Wine and the latest GE-Proton (`tests/install-wine.sh`).
 Each script states what it checks. Valve's own Proton is not available
-outside Steam, so a new Valve Proton still needs a manual check.
+outside Steam, so a new Valve Proton still needs a manual check. The
+extraction check compares the files with the README's `sha256sums` block
+after "extracts from `dxnt.cab` are:", so that sentence and its block move
+together.
 
 - **Extraction mode** is safe to run anywhere:
   `dpsetup.exe <empty folder>` from the staged `redistributable`, then read
