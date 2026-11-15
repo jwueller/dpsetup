@@ -5,6 +5,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# The jobs run third-party code (GE-Proton), so the token can only read.
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build and test extraction
@@ -15,12 +19,12 @@ jobs:
           # The version string counts commits, so the history must be complete.
           fetch-depth: 0
 
-      - uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x86
-
       - name: Build
+        shell: pwsh
         run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          Import-Module "$vs\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
+          Enter-VsDevShell -VsInstallPath $vs -DevCmdArguments '-arch=x86 -host_arch=amd64' -SkipAutomaticLocation
           cmake --preset release
           cmake --build out/build/release
           "ZIP=$((Get-Item out/build/release/dpsetup-*.zip).FullName)" >> $env:GITHUB_ENV
@@ -109,7 +113,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download --repo GloriousEggroll/proton-ge-custom --pattern '*-x86_64.tar.gz' --dir "$RUNNER_TEMP"
+          gh release download --repo GloriousEggroll/proton-ge-custom --pattern '*-x86_64.tar.gz' --pattern '*-x86_64.sha512sum' --dir "$RUNNER_TEMP"
+          (cd "$RUNNER_TEMP" && sha512sum -c GE-Proton*-x86_64.sha512sum)
           tar -xzf "$RUNNER_TEMP"/GE-Proton*-x86_64.tar.gz -C "$RUNNER_TEMP"
           proton=$(find "$RUNNER_TEMP" -maxdepth 1 -type d -name 'GE-Proton*')
           cat "$proton/version"
