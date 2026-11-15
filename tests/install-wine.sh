@@ -10,8 +10,9 @@ expected=$(realpath "$2")
 log="$(dirname "$exe")/dpsetup.log"
 export WINEDEBUG=-all
 
+# Both build the missing prefix within the run itself, as Proton does under
+# Steam.
 if [ -n "${PROTON:-}" ]; then
-    # Proton's own script builds the prefix on first run, as under Steam.
     STEAM_COMPAT_DATA_PATH=$(mktemp -d)
     STEAM_COMPAT_CLIENT_INSTALL_PATH=$STEAM_COMPAT_DATA_PATH
     export STEAM_COMPAT_DATA_PATH STEAM_COMPAT_CLIENT_INSTALL_PATH
@@ -21,8 +22,6 @@ if [ -n "${PROTON:-}" ]; then
 else
     export WINEPREFIX="$(mktemp -d)/prefix" WINEDLLOVERRIDES='mscoree,mshtml='
     run() { wine "$@"; }
-    wineboot --init
-    wineserver -w
 fi
 
 status=0
