@@ -32,6 +32,13 @@ tree is signed.
 
 ## Checking a change
 
+CI (`.github/workflows/ci.yml`) builds every push and runs both install
+routes on disposable machines: the DISM route on GitHub's Windows runners,
+which are elevated and ship with DirectPlay disabled
+(`tests/windows-install.ps1`), and the extraction route in a fresh Wine
+prefix (`tests/wine-install.sh`). Each script states what it checks. The
+Wine job uses plain Wine, so a new Proton still needs a manual check.
+
 - **Extraction mode** is safe to run anywhere:
   `dpsetup.exe <empty folder>` from the staged `redistributable`, then read
   the exit code and `dpsetup.log` beside the exe.
@@ -64,6 +71,7 @@ tree is signed.
   Microsoft's files, byte for byte, and the firewall script.
 - `examples/` -- what a developer copies into a build and adapts: the
   Steam install script, its GOG counterpart and the game manifest.
+- `tests/` -- the install-mode checks CI runs; never on a machine you keep.
 - `cmake/` -- what the distribution step needs: the checksum script and the
   `.gitattributes` that ships at the distribution's root.
 

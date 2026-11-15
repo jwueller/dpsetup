@@ -13,8 +13,9 @@ has one home; anything a human needs belongs there, not here.
   script, not a commit message.
 - **Never run `dpsetup.exe` without an argument to try a change.** That is
   install mode: it raises a UAC prompt and enables a Windows feature.
-  `dpsetup.exe <folder>` is the safe check (CONTRIBUTING, "Checking a
-  change").
+  `dpsetup.exe <folder>` is the safe check locally; install mode itself is
+  tested by pushing, since CI runs it on disposable machines (CONTRIBUTING,
+  "Checking a change").
 - The Microsoft files of `redistributable/` are stored byte for
   byte and never edited, re-saved or regenerated; the README says where
   they come from.
