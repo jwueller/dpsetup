@@ -2,8 +2,8 @@
 
 Microsoft's _DirectPlay_ has been deprecated and is no longer installed and/or enabled on modern Windows. `dpsetup` is a small utility that installs, registers and enables it from the official redistributable files, or just extracts them to a specified directory.
 
-- Silent by default
-- Validates redistributable source file
+- Silent via `/quiet`
+- Validates redistributable input file
 - Signed via code signing certificate to meet [SmartScreen](https://learn.microsoft.com/en-us/windows/security/operating-system-security/virus-and-threat-protection/microsoft-defender-smartscreen/) requirements
 - Offline
 - Works under Wine/Proton
@@ -16,7 +16,7 @@ Build and contribution instructions can be found there as well: https://github.c
 
 ## Installation
 
-`dpsetup.exe /quiet` installs, registers and enables _DirectPlay_ on the current machine (or in the current Wine/Proton prefix). It needs administrator permissions on Windows, and asks for them through UAC when it lacks them.
+`dpsetup.exe [/install|/repair] [/quiet|/passive] [/norestart] [/log <file>]` installs, registers and enables _DirectPlay_ on the current machine (or in the current Wine/Proton prefix). It needs administrator permissions on Windows, and asks for them through UAC when it lacks them.
 
 Install mode is also what runs without arguments, but scripts and installers should pass `/quiet` regardless: a later version may show a user interface without it.
 
@@ -26,7 +26,7 @@ Exits with a non-zero exit code if _DirectPlay_ cannot be made available. Consul
 
 ## Extraction
 
-`dpsetup.exe <target-path>` (or `dpsetup.exe /extract <target-path>`) will extract _DirectPlay_ runtime binaries to the specified directory, but does not attempt to register them or enable any system-wide features, so it doesn't require administrator permissions. Missing folders will be created and files with the same names will be overwritten.
+`dpsetup.exe [/extract] [/quiet|/passive] [/norestart] [/log <file>] <target-path>` will extract _DirectPlay_ runtime binaries to the specified directory, but does not attempt to register them or enable any system-wide features, so it doesn't require administrator permissions. Missing folders will be created and files with the same names will be overwritten.
 
 Exits with a non-zero exit code on failure. Consult [§ Diagnostics](#diagnostics) for additional information.
 
