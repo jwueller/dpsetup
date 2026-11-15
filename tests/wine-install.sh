@@ -1,21 +1,32 @@
 #!/bin/sh
-# Runs install mode in a fresh Wine prefix and checks the prefix afterwards
-# against <expected-dir>, which holds what extraction mode extracts.
-# Wine has no dismapi.dll, so this covers the extraction route.
-# Usage: wine-install.sh <dpsetup.exe> <expected-dir>
+# Runs install mode in a fresh Wine or Proton prefix and checks the prefix
+# afterwards against <expected-dir>, which holds what extraction mode
+# extracts. Neither has dismapi.dll, so this covers the extraction route.
+# Usage: [PROTON=<proton-dir>] wine-install.sh <dpsetup.exe> <expected-dir>
 set -eu
 
 exe=$(realpath "$1")
 expected=$(realpath "$2")
 log="$(dirname "$exe")/dpsetup.log"
-WINEPREFIX="$(mktemp -d)/prefix"
-export WINEPREFIX WINEDEBUG=-all WINEDLLOVERRIDES='mscoree,mshtml='
+export WINEDEBUG=-all
 
-wineboot --init
-wineserver -w
+if [ -n "${PROTON:-}" ]; then
+    # Proton's own script builds the prefix on first run, as under Steam.
+    STEAM_COMPAT_DATA_PATH=$(mktemp -d)
+    STEAM_COMPAT_CLIENT_INSTALL_PATH=$STEAM_COMPAT_DATA_PATH
+    export STEAM_COMPAT_DATA_PATH STEAM_COMPAT_CLIENT_INSTALL_PATH
+    export WINEPREFIX="$STEAM_COMPAT_DATA_PATH/pfx"
+    run() { python3 "$PROTON/proton" run "$@"; }
+    wineserver() { "$PROTON/files/bin/wineserver" "$@"; }
+else
+    export WINEPREFIX="$(mktemp -d)/prefix" WINEDLLOVERRIDES='mscoree,mshtml='
+    run() { wine "$@"; }
+    wineboot --init
+    wineserver -w
+fi
 
 status=0
-wine "$exe" || status=$?
+run "$exe" || status=$?
 # COM registrations reach system.reg only when wineserver shuts down.
 wineserver -w
 echo 'dpsetup.log:'
@@ -39,4 +50,4 @@ for dll in dplayx.dll dpnet.dll dpnhpast.dll dpnhupnp.dll; do
         { echo "$dll was not registered"; exit 1; }
 done
 
-echo 'Wine prefix checks passed'
+echo 'Prefix checks passed'
