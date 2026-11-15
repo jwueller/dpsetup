@@ -35,8 +35,9 @@ jobs:
           $exe = Get-Item out/build/release/dist/dpsetup-*/redistributable/dpsetup.exe
           $target = Join-Path $env:RUNNER_TEMP extracted
           $p = Start-Process $exe.FullName -ArgumentList "`"$target`"" -Wait -PassThru -NoNewWindow
-          'dpsetup.log:'
-          Get-Content (Join-Path $exe.DirectoryName dpsetup.log) | ForEach-Object { "  | $_" }
+          ''
+          Get-Content (Join-Path $exe.DirectoryName dpsetup.log) | ForEach-Object { "  $_" }
+          ''
           Get-ChildItem $target
           if ($p.ExitCode -ne 0) { throw "dpsetup.exe exited with $($p.ExitCode)" }
 
@@ -92,8 +93,9 @@ jobs:
       - name: Extract the expected files
         run: |
           xvfb-run -a wine "$EXE" "$(winepath -w "$RUNNER_TEMP/expected")"
-          echo 'dpsetup.log:'
-          sed 's/^/  | /' "$(dirname "$EXE")/dpsetup.log"
+          echo
+          sed 's/^/  /' "$(dirname "$EXE")/dpsetup.log"
+          echo
       - name: Test installation
         run: xvfb-run -a sh tests/install-wine.sh "$EXE" "$RUNNER_TEMP/expected"
 
@@ -129,7 +131,8 @@ jobs:
         run: |
           mkdir -p "$STEAM_COMPAT_DATA_PATH"
           xvfb-run -a python3 "$PROTON/proton" run "$EXE" "Z:$(echo "$RUNNER_TEMP/expected" | tr / '\\')"
-          echo 'dpsetup.log:'
-          sed 's/^/  | /' "$(dirname "$EXE")/dpsetup.log"
+          echo
+          sed 's/^/  /' "$(dirname "$EXE")/dpsetup.log"
+          echo
       - name: Test installation
         run: xvfb-run -a sh tests/install-wine.sh "$EXE" "$RUNNER_TEMP/expected"

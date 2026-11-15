@@ -12,6 +12,12 @@ function Get-FeatureState {
     (Get-WindowsOptionalFeature -Online -FeatureName DirectPlay).State
 }
 
+# Machine-wide until the next restart; other installers read it as "restart
+# pending" and may refuse to run.
+function Test-RebootPending {
+    Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending'
+}
+
 # The classes are 32-bit only, so they are created from a 32-bit process.
 function Test-ComClass([string] $Clsid) {
     & "$env:windir\SysWOW64\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -Command `
@@ -21,13 +27,15 @@ function Test-ComClass([string] $Clsid) {
 
 function Invoke-Install {
     $p = Start-Process $Exe -ArgumentList '/quiet' -Wait -PassThru -NoNewWindow
-    'dpsetup.log:'
-    Get-Content (Join-Path (Split-Path $Exe) dpsetup.log) | ForEach-Object { "  | $_" }
+    ''
+    Get-Content (Join-Path (Split-Path $Exe) dpsetup.log) | ForEach-Object { "  $_" }
+    ''
     if ($p.ExitCode -ne 0) { throw "install mode exited with $($p.ExitCode)" }
 }
 
 $before = Get-FeatureState
 "DirectPlay before: $before"
+"RebootPending before: $(Test-RebootPending)"
 if ($before -ne 'Disabled') { throw 'DirectPlay is not disabled beforehand, so this run proves nothing' }
 foreach ($name in $classes.Keys) { "$name before: $(Test-ComClass $classes[$name])" }
 
@@ -37,6 +45,7 @@ Invoke-Install
 
 $after = Get-FeatureState
 "DirectPlay after: $after"
+"RebootPending after: $(Test-RebootPending)"
 if ($after -eq 'EnablePending') {
     'The feature waits for a restart, so the COM classes cannot be checked'
     exit 0
