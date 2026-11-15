@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Build and test extraction mode
+    name: Build and test extraction
     runs-on: windows-2025
     steps:
       - uses: actions/checkout@v5
@@ -25,7 +25,7 @@ jobs:
           cmake --build out/build/release
           "ZIP=$((Get-Item out/build/release/dpsetup-*.zip).FullName)" >> $env:GITHUB_ENV
 
-      - name: Test extraction mode
+      - name: Test extraction
         shell: pwsh
         run: |
           $exe = Get-Item out/build/release/dist/dpsetup-*/redistributable/dpsetup.exe
@@ -47,7 +47,7 @@ jobs:
   # The hosted runners are disposable, already elevated, and ship with the
   # DirectPlay feature disabled, so install mode runs for real here.
   install-windows:
-    name: Test install mode (${{ matrix.os }})
+    name: Test installation (${{ matrix.os }})
     needs: build
     strategy:
       fail-fast: false
@@ -59,14 +59,14 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           path: ${{ runner.temp }}/artifact
-      - name: Test install mode
+      - name: Test installation
         shell: pwsh
         run: |
           $exe = Get-ChildItem $env:RUNNER_TEMP/artifact -Recurse -Filter dpsetup.exe
-          ./tests/windows-install.ps1 -Exe $exe.FullName
+          ./tests/install-windows.ps1 -Exe $exe.FullName
 
   install-wine:
-    name: Test install mode (Wine)
+    name: Test installation (Wine)
     needs: build
     runs-on: ubuntu-24.04
     env:
@@ -90,14 +90,14 @@ jobs:
           xvfb-run -a wine "$EXE" "$(winepath -w "$RUNNER_TEMP/expected")"
           echo 'dpsetup.log:'
           sed 's/^/  | /' "$(dirname "$EXE")/dpsetup.log"
-      - name: Test install mode
-        run: xvfb-run -a sh tests/wine-install.sh "$EXE" "$RUNNER_TEMP/expected"
+      - name: Test installation
+        run: xvfb-run -a sh tests/install-wine.sh "$EXE" "$RUNNER_TEMP/expected"
 
   # Agent's choice: the latest GE-Proton, since Valve publishes no Proton
   # binaries outside Steam and UMU-Proton (closer to Valve's) lags a major
   # version. Unpinned, so a new Proton that breaks dpsetup fails CI.
   install-proton:
-    name: Test install mode (Proton)
+    name: Test installation (Proton)
     needs: build
     runs-on: ubuntu-24.04
     steps:
@@ -127,5 +127,5 @@ jobs:
           xvfb-run -a python3 "$PROTON/proton" run "$EXE" "Z:$(echo "$RUNNER_TEMP/expected" | tr / '\\')"
           echo 'dpsetup.log:'
           sed 's/^/  | /' "$(dirname "$EXE")/dpsetup.log"
-      - name: Test install mode
-        run: xvfb-run -a sh tests/wine-install.sh "$EXE" "$RUNNER_TEMP/expected"
+      - name: Test installation
+        run: xvfb-run -a sh tests/install-wine.sh "$EXE" "$RUNNER_TEMP/expected"

@@ -35,9 +35,10 @@ tree is signed.
 CI (`.github/workflows/ci.yml`) builds every push and runs both install
 routes on disposable machines: the DISM route on GitHub's Windows runners,
 which are elevated and ship with DirectPlay disabled
-(`tests/windows-install.ps1`), and the extraction route in a fresh Wine
-prefix (`tests/wine-install.sh`). Each script states what it checks. The
-Wine job uses plain Wine, so a new Proton still needs a manual check.
+(`tests/install-windows.ps1`), and the extraction route in a fresh prefix
+of both plain Wine and the latest GE-Proton (`tests/install-wine.sh`).
+Each script states what it checks. Valve's own Proton is not available
+outside Steam, so a new Valve Proton still needs a manual check.
 
 - **Extraction mode** is safe to run anywhere:
   `dpsetup.exe <empty folder>` from the staged `redistributable`, then read

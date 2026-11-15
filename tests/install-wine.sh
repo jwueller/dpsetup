@@ -2,7 +2,7 @@
 # Runs install mode in a fresh Wine or Proton prefix and checks the prefix
 # afterwards against <expected-dir>, which holds what extraction mode
 # extracts. Neither has dismapi.dll, so this covers the extraction route.
-# Usage: [PROTON=<proton-dir>] wine-install.sh <dpsetup.exe> <expected-dir>
+# Usage: [PROTON=<proton-dir>] install-wine.sh <dpsetup.exe> <expected-dir>
 set -eu
 
 exe=$(realpath "$1")
