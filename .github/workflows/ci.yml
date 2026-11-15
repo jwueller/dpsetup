@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: windows-2025
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # The version string counts commits, so the history must be complete.
           fetch-depth: 0
@@ -33,29 +33,46 @@ jobs:
           Get-ChildItem $target
           if ($p.ExitCode -ne 0) { throw "dpsetup.exe exited with $($p.ExitCode)" }
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: dpsetup
           path: out/build/release/dpsetup-*.zip
 
-  probe:
+  # The hosted runners are disposable, already elevated, and ship with the
+  # DirectPlay feature disabled, so install mode runs for real here.
+  install-windows:
+    needs: build
     strategy:
       fail-fast: false
       matrix:
         os: [windows-2022, windows-2025, windows-11-arm]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Probe DirectPlay availability
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          name: dpsetup
+      - name: Install mode
         shell: pwsh
         run: |
-          $os = Get-CimInstance Win32_OperatingSystem
-          "$($os.Caption) $($os.Version) $($os.OSArchitecture)"
-          "Elevated: $(([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))"
-          foreach ($f in 'System32\dismapi.dll', 'SysWOW64\dplayx.dll', 'SysWOW64\dpnet.dll') {
-            "$f exists: $(Test-Path (Join-Path $env:windir $f))"
-          }
-          dism /online /get-featureinfo /featurename:DirectPlay
-          dism /online /get-featureinfo /featurename:LegacyComponents
-          Get-WindowsOptionalFeature -Online |
-            Where-Object FeatureName -Match 'DirectPlay|Legacy' |
-            Format-Table FeatureName, State
+          Expand-Archive dpsetup-*.zip -DestinationPath $env:RUNNER_TEMP/dist
+          $exe = Get-ChildItem $env:RUNNER_TEMP/dist -Recurse -Filter dpsetup.exe
+          ./tests/windows-install.ps1 -Exe $exe.FullName
+
+  install-wine:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          name: dpsetup
+      - name: Install Wine
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends wine wine32:i386 wine64
+      - name: Install mode
+        run: |
+          unzip -q dpsetup-*.zip -d "$RUNNER_TEMP/dist"
+          xvfb-run -a sh tests/wine-install.sh "$(find "$RUNNER_TEMP/dist" -name dpsetup.exe)"
