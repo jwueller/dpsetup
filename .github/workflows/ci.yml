@@ -66,6 +66,10 @@ jobs:
             throw 'extracted files differ from README.md'
           }
 
+      - name: Test the command line
+        shell: pwsh
+        run: ./tests/cli.ps1 -Exe (Get-Item out/build/release/dist/dpsetup-*/redistributable/dpsetup.exe).FullName
+
       # Unarchived, so the release zip is the artifact rather than a zip
       # inside the zip that an artifact otherwise is. download-artifact
       # unpacks it again.

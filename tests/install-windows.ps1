@@ -26,11 +26,13 @@ function Test-ComClass([string] $Clsid) {
 }
 
 function Invoke-Install {
-    $arguments = '/quiet'
+    $log = Join-Path ([IO.Path]::GetTempPath()) 'dpsetup-install.log'
+    Remove-Item $log -ErrorAction SilentlyContinue
+    $arguments = "/quiet /log `"$log`""
     "+ `"$Exe`" $arguments"
     $p = Start-Process $Exe -ArgumentList $arguments -Wait -PassThru -NoNewWindow
     ''
-    Get-Content (Join-Path (Split-Path $Exe) dpsetup.log) | ForEach-Object { "  $_" }
+    Get-Content $log | ForEach-Object { "  $_" }
     ''
     if ($p.ExitCode -ne 0) { throw "install mode exited with $($p.ExitCode)" }
 }

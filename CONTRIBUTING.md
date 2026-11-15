@@ -37,7 +37,8 @@ routes on disposable machines: the DISM route on GitHub's Windows runners,
 which are elevated and ship with DirectPlay disabled
 (`tests/install-windows.ps1`), and the extraction route in a fresh prefix
 of both plain Wine and the latest GE-Proton (`tests/install-wine.sh`).
-Each script states what it checks. Valve's own Proton is not available
+The build job also runs the command line through extraction mode
+(`tests/cli.ps1`). Each script states what it checks. Valve's own Proton is not available
 outside Steam, so a new Valve Proton still needs a manual check. The
 extraction check compares the files with the README's `sha256sums` block
 after "extracts from `dxnt.cab` are:", so that sentence and its block move
@@ -76,7 +77,7 @@ together.
   Microsoft's files, byte for byte, and the firewall script.
 - `examples/` -- what a developer copies into a build and adapts: the
   Steam install script, its GOG counterpart and the game manifest.
-- `tests/` -- the install-mode checks CI runs; never on a machine you keep.
+- `tests/` -- the checks CI runs; never on a machine you keep.
 - `cmake/` -- what the distribution step needs: the checksum script and the
   `.gitattributes` that ships at the distribution's root.
 
