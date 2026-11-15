@@ -25,9 +25,13 @@ else
 fi
 
 status=0
+# Traced, so the output shows the command each runner really executes.
+set -x
 run "$exe" /quiet || status=$?
+{ set +x; } 2>/dev/null
 # COM registrations reach system.reg only when wineserver shuts down.
 wineserver -w
+
 echo
 sed 's/^/  /' "$log"
 echo

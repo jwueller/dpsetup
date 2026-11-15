@@ -34,7 +34,9 @@ jobs:
         run: |
           $exe = Get-Item out/build/release/dist/dpsetup-*/redistributable/dpsetup.exe
           $target = Join-Path $env:RUNNER_TEMP extracted
-          $p = Start-Process $exe.FullName -ArgumentList "`"$target`"" -Wait -PassThru -NoNewWindow
+          $arguments = "`"$target`""
+          "+ `"$($exe.FullName)`" $arguments"
+          $p = Start-Process $exe.FullName -ArgumentList $arguments -Wait -PassThru -NoNewWindow
           ''
           Get-Content (Join-Path $exe.DirectoryName dpsetup.log) | ForEach-Object { "  $_" }
           ''
@@ -92,7 +94,9 @@ jobs:
       # In the default prefix, which the install test never touches.
       - name: Extract the expected files
         run: |
+          set -x
           xvfb-run -a wine "$EXE" "$(winepath -w "$RUNNER_TEMP/expected")"
+          { set +x; } 2>/dev/null
           echo
           sed 's/^/  /' "$(dirname "$EXE")/dpsetup.log"
           echo
@@ -130,7 +134,9 @@ jobs:
           WINEDEBUG: -all
         run: |
           mkdir -p "$STEAM_COMPAT_DATA_PATH"
+          set -x
           xvfb-run -a python3 "$PROTON/proton" run "$EXE" "Z:$(echo "$RUNNER_TEMP/expected" | tr / '\\')"
+          { set +x; } 2>/dev/null
           echo
           sed 's/^/  /' "$(dirname "$EXE")/dpsetup.log"
           echo

@@ -26,7 +26,9 @@ function Test-ComClass([string] $Clsid) {
 }
 
 function Invoke-Install {
-    $p = Start-Process $Exe -ArgumentList '/quiet' -Wait -PassThru -NoNewWindow
+    $arguments = '/quiet'
+    "+ `"$Exe`" $arguments"
+    $p = Start-Process $Exe -ArgumentList $arguments -Wait -PassThru -NoNewWindow
     ''
     Get-Content (Join-Path (Split-Path $Exe) dpsetup.log) | ForEach-Object { "  $_" }
     ''
