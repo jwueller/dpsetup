@@ -11,17 +11,20 @@ export WINEPREFIX WINEDEBUG=-all WINEDLLOVERRIDES='mscoree,mshtml='
 wineboot --init
 wineserver -w
 
-# Extraction mode supplies the files install mode is expected to place.
-expected=$(mktemp -d)
-wine "$exe" "$(winepath -w "$expected")"
-cat "$log"
-
+echo '--- install mode'
 status=0
 wine "$exe" || status=$?
 # COM registrations reach system.reg only when wineserver shuts down.
 wineserver -w
 cat "$log"
 [ "$status" -eq 0 ] || { echo "install mode exited with $status"; exit 1; }
+
+echo '--- extraction mode, for the files install mode should have placed'
+expected=$(mktemp -d)
+wine "$exe" "$(winepath -w "$expected")"
+cat "$log"
+
+echo '--- checks'
 
 grep -q 'LoadLibraryExW("dismapi.dll") -> error' "$log" ||
     { echo 'install mode did not take the extraction route'; exit 1; }

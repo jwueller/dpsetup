@@ -23,7 +23,7 @@ jobs:
           cmake --preset release
           cmake --build out/build/release
 
-      - name: Extraction mode
+      - name: Test extraction mode
         shell: pwsh
         run: |
           $exe = Get-Item out/build/release/dist/dpsetup-*/redistributable/dpsetup.exe
@@ -52,7 +52,7 @@ jobs:
       - uses: actions/download-artifact@v5
         with:
           name: dpsetup
-      - name: Install mode
+      - name: Test install mode
         shell: pwsh
         run: |
           Expand-Archive dpsetup-*.zip -DestinationPath $env:RUNNER_TEMP/dist
@@ -72,7 +72,7 @@ jobs:
           sudo dpkg --add-architecture i386
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends wine wine32:i386 wine64
-      - name: Install mode
+      - name: Test install mode
         run: |
           unzip -q dpsetup-*.zip -d "$RUNNER_TEMP/dist"
           xvfb-run -a sh tests/wine-install.sh "$(find "$RUNNER_TEMP/dist" -name dpsetup.exe)"
