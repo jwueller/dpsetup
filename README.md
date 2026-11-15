@@ -1,6 +1,6 @@
-# `dpsetup` -- Universal standalone installer for _DirectPlay_ on Windows and Wine
+# dpsetup
 
-Microsoft's _DirectPlay_ has been deprecated and is no longer installed and/or enabled on modern Windows. `dpsetup` is a small utility that installs, registers and enables Microsoft's _DirectPlay_ implementation from the official redistributable files, or extracts them to a specified directory.
+Microsoft's _DirectPlay_ has been deprecated and is no longer installed and/or enabled on modern Windows. `dpsetup` is a small utility that installs, registers and enables it from the official redistributable files, or just extracts them to a specified directory.
 
 - Silent by default
 - Validates redistributable source file
@@ -14,25 +14,39 @@ For source code, issues and releases, visit: https://github.com/jwueller/dpsetup
 
 Build and contribution instructions can be found there as well: https://github.com/jwueller/dpsetup/blob/master/CONTRIBUTING.md
 
-## Install mode
+## Installation
 
-Without arguments, `dpsetup.exe` installs, registers and enables _DirectPlay_ on the current machine (or in the current Wine/Proton prefix). It needs administrator permissions on Windows.
+`dpsetup.exe /quiet` installs, registers and enables _DirectPlay_ on the current machine (or in the current Wine/Proton prefix). It needs administrator permissions on Windows, and asks for them through UAC when it lacks them.
 
-If possible, it enables the optional Windows feature through the [DISM API](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/dism-api-reference). Otherwise, it extracts _DirectPlay_ runtime binaries from an adjacent `dxnt.cab` into the system directory and registers their COM classes explicitly. It also registers Wine DLL overrides to ensure that it takes precedence over Wine's own built-in _DirectPlay_ implementation.
+Install mode is also what runs without arguments, but scripts and installers should pass `/quiet` regardless: a later version may show a user interface without it.
 
-Exits with a non-zero exit code if _DirectPlay_ cannot be made available. Consult the [diagnostics](#diagnostics) for additional information.
+If possible, it enables the optional Windows feature through the [DISM API](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/dism/dism-api-reference). Otherwise, it extracts _DirectPlay_ runtime binaries from an adjacent `dxnt.cab` into the system directory and registers their COM classes explicitly. It also registers Wine DLL overrides to ensure that it takes precedence over Wine's own built-in _DirectPlay_ implementation.
 
-## Extraction mode
+Exits with a non-zero exit code if _DirectPlay_ cannot be made available. Consult [§ Diagnostics](#diagnostics) for additional information.
 
-`dpsetup.exe <target-path>` will extract _DirectPlay_ runtime binaries to the specified directory, but does not attempt to register them or enable any system-wide features, so it doesn't require administrator permissions. Missing folders will be created and files with the same names will be overwritten.
+## Extraction
 
-Exits with a non-zero exit code on failure. Consult the [diagnostics](#diagnostics) for additional information.
+`dpsetup.exe <target-path>` (or `dpsetup.exe /extract <target-path>`) will extract _DirectPlay_ runtime binaries to the specified directory, but does not attempt to register them or enable any system-wide features, so it doesn't require administrator permissions. Missing folders will be created and files with the same names will be overwritten.
+
+Exits with a non-zero exit code on failure. Consult [§ Diagnostics](#diagnostics) for additional information.
+
+## Command line
+
+Switches follow the convention of Windows installers such as the Visual C++ Redistributable: they start with `/` and ignore case. Any other argument is the extraction folder, so a folder must not start with `/`.
+
+- `/install`, `/repair` -- install mode, which is also the default. Installing again repairs.
+- `/extract <target-path>` -- extraction mode, the same as a bare `<target-path>`.
+- `/quiet`, `/passive`, `/norestart` -- accepted in both modes. `dpsetup.exe` has no user interface and never restarts Windows, so they change nothing yet.
+- `/log <file>` -- logs to `<file>` instead of `dpsetup.log` beside `dpsetup.exe`. A relative path is relative to the working directory.
+- `/?`, `/help` -- shows the usage in a message box and exits 0.
+
+Any other switch, including `/uninstall` and `/layout`, exits with `ERROR_INVALID_PARAMETER` (87) without changing anything, as do a second folder, a folder after `/install`, and `/extract` without one. _DirectPlay_ is shared by every game on the machine, so no game's uninstaller may remove it.
 
 ## Diagnostics
 
 `dpsetup.exe` attempts to log the steps taken, their results, and any errors encountered by all of the following means:
 
-- Overwriting `dpsetup.log` next to `dpsetup.exe` (_not_ the working directory)
+- Overwriting `dpsetup.log` next to `dpsetup.exe` (_not_ the working directory), or the file given with `/log`
 - Writing to the attached console, if any
 
 However, failure to log is non-fatal, and does not affect normal operation.

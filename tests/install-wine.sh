@@ -26,7 +26,7 @@ else
 fi
 
 status=0
-run "$exe" || status=$?
+run "$exe" /quiet || status=$?
 # COM registrations reach system.reg only when wineserver shuts down.
 wineserver -w
 echo 'dpsetup.log:'

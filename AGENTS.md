@@ -11,8 +11,9 @@ has one home; anything a human needs belongs there, not here.
 - dpsetup was extracted from DirectRetrofit v1.x, and saying so is fine.
   Nothing else here names DirectRetrofit: not a comment, not a shipped
   script, not a commit message.
-- **Never run `dpsetup.exe` without an argument to try a change.** That is
-  install mode: it raises a UAC prompt and enables a Windows feature.
+- **Never run `dpsetup.exe` without a folder argument to try a change**
+  (`/?` and invalid switches aside). That is install mode: it raises a UAC
+  prompt and enables a Windows feature.
   `dpsetup.exe <folder>` is the safe check locally; install mode itself is
   tested by pushing, since CI runs it on disposable machines (CONTRIBUTING,
   "Checking a change").

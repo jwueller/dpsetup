@@ -57,8 +57,9 @@ outside Steam, so a new Valve Proton still needs a manual check.
 
 ## Where things are
 
-- `src/main.cpp` -- routing: install mode (DISM on Windows, extraction into
-  the prefix elsewhere) or `dpsetup.exe <folder>` extraction; elevation.
+- `src/main.cpp` -- the command line; routing: install mode (DISM on
+  Windows, extraction into the prefix elsewhere) or `dpsetup.exe <folder>`
+  extraction; elevation.
 - `src/cab.cpp` -- verifying `dxnt.cab`, extracting from it (`cabinet.dll`)
   and verifying the result (`VerifyExtractedFiles`).
 - `src/dism.cpp` -- the Windows leg: loading the DISM API and enabling the
@@ -80,6 +81,19 @@ outside Steam, so a new Valve Proton still needs a manual check.
 
 Decisions that shape the program, and the constraint behind each.
 
+- **Installer switches, and `/quiet` is passed although it does nothing
+  yet.** The switches are those of the Visual C++ Redistributable, so a
+  developer needs nothing new. A double-click passes no arguments, and an
+  end user who runs dpsetup that way should one day see a user interface;
+  every script and example therefore passes `/quiet`, so the default can
+  change without breaking a game that already shipped. Unknown switches
+  fail instead of being taken for a folder, which keeps every switch a
+  later version adds from extracting into a folder of its name in this one.
+  `/uninstall` is rejected for good: the feature is shared by every game
+  on the machine and nothing counts its users. The elevated relaunch
+  gets the same arguments, except that `/log` is rewritten to an absolute
+  path: an elevated process starts in the system directory and would put
+  a relative log there.
 - **GUI subsystem, one binary.** The GUI subsystem keeps Steam's first-time
   setup windowless; a console program would flash a window there. A second
   `.com` shim for interactive use was passed over: it would add a binary
@@ -88,8 +102,7 @@ Decisions that shape the program, and the constraint behind each.
 - **Static CRT, no dependencies, no configuration.** It runs before any
   Visual C++ runtime is guaranteed to be present, so it links the CRT
   statically (`/MT`) and everything it uses is compiled into it. It reads
-  no configuration, and `dpsetup.log` is a fixed file next to the
-  executable.
+  no configuration; the command line is its only input.
 - **Install mode routes on Windows' servicing stack, and DISM's outcome is
   the feature state.** One mechanism answers both questions: `dismapi.dll`
   loading from the system directory means Windows (`LoadDismApi`), and the

@@ -28,7 +28,7 @@
                 "executable": "{app}\\dpsetup\\dpsetup.exe",
                 "workingDir": "{app}\\dpsetup",
                 "runAsAdmin": true,
-                "arguments": "",
+                "arguments": "/quiet",
                 "conditions": [
                   "onlyOnce"
                 ]

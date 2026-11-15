@@ -1,6 +1,6 @@
 // An example Steam install script that sets Microsoft's DirectPlay up at a
-// game's first-time setup. This example assumes a `dpsetup\` redistributable
-// folder beside the game's executable at the install root. Adjust as needed.
+// game's first-time setup. This example assumes a `dpsetup\` folder next to the
+// game's executable at the install root. Adjust as needed.
 //
 // To use it, include an "InstallScript" section of your depot configuration.
 // Steamworks will sign it during the depot build, and Steam client only runs
@@ -22,13 +22,21 @@
 //         "InstallScript" "common\\dpsetup\\installscript.vdf"
 //     }
 //
+// See: https://partner.steamgames.com/doc/sdk/installscripts
 "InstallScript"
 {
+    // Adjust the rule name and `game.exe` with your own.
+    "Firewall"
+    {
+        "Example Game"  "%INSTALLDIR%\\game.exe"
+    }
+
     "Run Process"
     {
         "DirectPlay"
         {
             "process 1" "%INSTALLDIR%\\dpsetup\\dpsetup.exe"
+            "command 1" "/install /quiet /norestart"
 
             // The HasRunKey is app-agnostic on purpose, since DirectPlay setup
             // is system-wide, not per game, so other games can skip
@@ -42,12 +50,5 @@
             // installation, so we can't remove it.
             "NoCleanUp" "1"
         }
-    }
-
-    // Lets the game accept DirectPlay connections through Windows Firewall.
-    // The name is what the rule is listed under.
-    "Firewall"
-    {
-        "Example Game"   "%INSTALLDIR%\\game.exe"
     }
 }

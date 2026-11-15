@@ -20,7 +20,7 @@ function Test-ComClass([string] $Clsid) {
 }
 
 function Invoke-Install {
-    $p = Start-Process $Exe -Wait -PassThru -NoNewWindow
+    $p = Start-Process $Exe -ArgumentList '/quiet' -Wait -PassThru -NoNewWindow
     'dpsetup.log:'
     Get-Content (Join-Path (Split-Path $Exe) dpsetup.log) | ForEach-Object { "  | $_" }
     if ($p.ExitCode -ne 0) { throw "install mode exited with $($p.ExitCode)" }
