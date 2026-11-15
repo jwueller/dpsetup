@@ -31,7 +31,8 @@ jobs:
           $exe = Get-Item out/build/release/dist/dpsetup-*/redistributable/dpsetup.exe
           $target = Join-Path $env:RUNNER_TEMP extracted
           $p = Start-Process $exe.FullName -ArgumentList "`"$target`"" -Wait -PassThru -NoNewWindow
-          Get-Content (Join-Path $exe.DirectoryName dpsetup.log)
+          'dpsetup.log:'
+          Get-Content (Join-Path $exe.DirectoryName dpsetup.log) | ForEach-Object { "  | $_" }
           Get-ChildItem $target
           if ($p.ExitCode -ne 0) { throw "dpsetup.exe exited with $($p.ExitCode)" }
 
@@ -87,6 +88,7 @@ jobs:
       - name: Extract the expected files
         run: |
           xvfb-run -a wine "$EXE" "$(winepath -w "$RUNNER_TEMP/expected")"
-          cat "$(dirname "$EXE")/dpsetup.log"
+          echo 'dpsetup.log:'
+          sed 's/^/  | /' "$(dirname "$EXE")/dpsetup.log"
       - name: Test install mode
         run: xvfb-run -a sh tests/wine-install.sh "$EXE" "$RUNNER_TEMP/expected"

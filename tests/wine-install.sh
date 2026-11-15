@@ -18,7 +18,8 @@ status=0
 wine "$exe" || status=$?
 # COM registrations reach system.reg only when wineserver shuts down.
 wineserver -w
-cat "$log"
+echo 'dpsetup.log:'
+sed 's/^/  | /' "$log"
 [ "$status" -eq 0 ] || { echo "install mode exited with $status"; exit 1; }
 
 grep -q 'LoadLibraryExW("dismapi.dll") -> error' "$log" ||
