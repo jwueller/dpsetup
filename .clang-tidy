@@ -3,13 +3,17 @@
 # modernize, readability, performance) argue with the project conventions
 # on nearly every line of Win32 code, and their findings were never
 # acted on. Subtracted from what remains: adjacent parameters of one type
-# (every Win32 signature), `void**` passed as `void*` (`LocalFree(argv)`),
-# the `std::formatter` specializations the project prescribes, and static
-# initializers that can throw (containers built at load, where the failure is
-# bad_alloc and terminate is the stated answer).
+# (every Win32 signature) and `void**` passed as `void*` (`ScopedLocal` over
+# `CommandLineToArgvW`'s result).
 #
-# Rider and ReSharper run this list too, because the `.DotSettings` layers
-# set ReSharper's own check list to empty: that list is appended to this one
+# The two pragma-pack diagnostics are off because Rider's clang reports them
+# on includes made at default packing (`dism.cpp`'s first includes), blaming
+# `#pragma pack(push, _CRT_PACKING)` in MSVC 14.51's own headers, which pop
+# it before including anything. The only packed region here, the DISM
+# structures in `dism.cpp`, includes nothing.
+#
+# Rider and ReSharper run this list too, because `CMakeLists.txt.DotSettings`
+# sets ReSharper's own check list to empty: that list is appended to this one
 # and wins, and its default lives in each machine's global settings.
 Checks: >-
   -*,
@@ -18,40 +22,35 @@ Checks: >-
   bugprone-*,
   -bugprone-easily-swappable-parameters,
   -bugprone-multi-level-implicit-pointer-conversion,
-  -bugprone-std-namespace-modification,
-  -bugprone-throwing-static-initialization,
-  -clang-diagnostic-language-extension-token
+  -clang-diagnostic-language-extension-token,
+  -clang-diagnostic-pragma-pack,
+  -clang-diagnostic-pragma-pack-suspicious-include
 
 WarningsAsErrors: ''
 HeaderFilterRegex: '.*[\\/]src[\\/].*'
 FormatStyle: none
 
 CheckOptions:
-  # Win32/COM entry points whose result is the only report of failure. A
-  # return-type match can't do this: HRESULT/LSTATUS canonicalize to builtins
-  # and the check needs a declaration to name, so callees are listed instead.
-  # An intentionally dropped result is spelled `(void)`.
+  # Win32 entry points whose result is the only report of failure, limited to
+  # those the sources call. A return-type match can't do this: LSTATUS
+  # canonicalizes to a builtin and the check needs a declaration to name, so
+  # callees are listed instead. An intentionally dropped result is spelled
+  # `(void)`.
   bugprone-unused-return-value.CheckedFunctions: >-
-    ::CoCreateInstance;::CoGetClassObject;::CoInitializeEx;
-    ::RegOpenKeyEx[AW];::RegCreateKeyEx[AW];::RegQueryValueEx[AW];::RegEnumKeyEx[AW];
-    ::RegSetValueEx[AW];::RegQueryInfoKey[AW];
-    ::LoadLibrary(Ex)?[AW];::GetProcAddress;::GetModuleHandleEx[AW];
+    ::RegCreateKeyEx[AW];::RegSetValueEx[AW];
+    ::LoadLibrary(Ex)?[AW];::GetProcAddress;
     ::CreateFile[AW];::CreateProcess[AW];::ReadFile;::WriteFile;
     ::GetSystemDirectory[AW];::GetModuleFileName[AW];
-    ::std::async;::std::launder;::std::remove;::std::remove_if;::std::unique;
-    ::std::unique_ptr::release;::std::basic_string::empty;::std::vector::empty
+    ::std::basic_string::empty;::std::vector::empty
   bugprone-unused-return-value.AllowCastToVoid: true
   # What may escape a noexcept function without a finding: the failures whose
-  # only answer in a game process is std::terminate, and the ones that cannot
-  # happen on the paths we write. Everything else the check reports is a
-  # boundary that needs a guard or a bug.
-  #  - bad_alloc family: the stated rule.
+  # only answer is std::terminate, and the ones that cannot happen on the
+  # paths we write. Everything else the check reports is a boundary that
+  # needs a guard or a bug.
+  #  - bad_alloc family: an installer out of memory has nothing left to try,
+  #    and terminate exits nonzero, which a launcher treats as a failed setup
+  #    and reruns.
   #  - format_error, bad_cast: std::format on a compile-time-checked format
   #    string reaches them only through the check's over-approximation of
   #    use_facet.
-  #  - Agent's choice: system_error, future_error, bad_variant_access. A
-  #    mutex, condition variable, thread or promise that fails means the
-  #    kernel is out of objects or the primitive is misused; a variant get
-  #    or visit follows a check of the
-  #    alternative. Terminate is the answer to each.
-  bugprone-exception-escape.IgnoredExceptions: 'bad_alloc,bad_array_new_length,length_error,format_error,bad_cast,system_error,future_error,bad_variant_access,std::bad_alloc,std::bad_array_new_length,std::length_error,std::format_error,std::bad_cast,std::system_error,std::future_error,std::bad_variant_access'
+  bugprone-exception-escape.IgnoredExceptions: 'bad_alloc,bad_array_new_length,length_error,format_error,bad_cast,std::bad_alloc,std::bad_array_new_length,std::length_error,std::format_error,std::bad_cast'
