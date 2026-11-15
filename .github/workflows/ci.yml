@@ -22,6 +22,7 @@ jobs:
         run: |
           cmake --preset release
           cmake --build out/build/release
+          "ZIP=$((Get-Item out/build/release/dpsetup-*.zip).FullName)" >> $env:GITHUB_ENV
 
       - name: Test extraction mode
         shell: pwsh
@@ -33,10 +34,12 @@ jobs:
           Get-ChildItem $target
           if ($p.ExitCode -ne 0) { throw "dpsetup.exe exited with $($p.ExitCode)" }
 
-      - uses: actions/upload-artifact@v5
+      # Unarchived, so the release zip is the artifact rather than a zip
+      # inside the zip that an artifact otherwise is.
+      - uses: actions/upload-artifact@v7
         with:
-          name: dpsetup
-          path: out/build/release/dpsetup-*.zip
+          path: ${{ env.ZIP }}
+          archive: false
 
   # The hosted runners are disposable, already elevated, and ship with the
   # DirectPlay feature disabled, so install mode runs for real here.
@@ -49,30 +52,44 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
-          name: dpsetup
-      - name: Test install mode
+          path: ${{ runner.temp }}/artifact
+      - name: Unpack
         shell: pwsh
         run: |
-          Expand-Archive dpsetup-*.zip -DestinationPath $env:RUNNER_TEMP/dist
+          $zip = Get-ChildItem $env:RUNNER_TEMP/artifact -Recurse -Filter dpsetup-*.zip
+          Expand-Archive $zip.FullName -DestinationPath $env:RUNNER_TEMP/dist
           $exe = Get-ChildItem $env:RUNNER_TEMP/dist -Recurse -Filter dpsetup.exe
-          ./tests/windows-install.ps1 -Exe $exe.FullName
+          "EXE=$($exe.FullName)" >> $env:GITHUB_ENV
+      - name: Test install mode
+        shell: pwsh
+        run: ./tests/windows-install.ps1 -Exe $env:EXE
 
   install-wine:
     needs: build
     runs-on: ubuntu-24.04
+    env:
+      WINEDEBUG: -all
+      WINEDLLOVERRIDES: mscoree,mshtml=
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
-          name: dpsetup
+          path: ${{ runner.temp }}/artifact
       - name: Install Wine
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends wine wine32:i386 wine64
-      - name: Test install mode
+      - name: Unpack
         run: |
-          unzip -q dpsetup-*.zip -d "$RUNNER_TEMP/dist"
-          xvfb-run -a sh tests/wine-install.sh "$(find "$RUNNER_TEMP/dist" -name dpsetup.exe)"
+          unzip -q "$(find "$RUNNER_TEMP/artifact" -name 'dpsetup-*.zip')" -d "$RUNNER_TEMP/dist"
+          echo "EXE=$(find "$RUNNER_TEMP/dist" -name dpsetup.exe)" >> "$GITHUB_ENV"
+      # In the default prefix, which the install test never touches.
+      - name: Extract the expected files
+        run: |
+          xvfb-run -a wine "$EXE" "$(winepath -w "$RUNNER_TEMP/expected")"
+          cat "$(dirname "$EXE")/dpsetup.log"
+      - name: Test install mode
+        run: xvfb-run -a sh tests/wine-install.sh "$EXE" "$RUNNER_TEMP/expected"

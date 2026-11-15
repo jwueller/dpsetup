@@ -1,9 +1,12 @@
 #!/bin/sh
-# Runs install mode in a fresh Wine prefix and checks the prefix afterwards.
+# Runs install mode in a fresh Wine prefix and checks the prefix afterwards
+# against <expected-dir>, which holds what extraction mode extracts.
 # Wine has no dismapi.dll, so this covers the extraction route.
+# Usage: wine-install.sh <dpsetup.exe> <expected-dir>
 set -eu
 
 exe=$(realpath "$1")
+expected=$(realpath "$2")
 log="$(dirname "$exe")/dpsetup.log"
 WINEPREFIX="$(mktemp -d)/prefix"
 export WINEPREFIX WINEDEBUG=-all WINEDLLOVERRIDES='mscoree,mshtml='
@@ -11,20 +14,12 @@ export WINEPREFIX WINEDEBUG=-all WINEDLLOVERRIDES='mscoree,mshtml='
 wineboot --init
 wineserver -w
 
-echo '--- install mode'
 status=0
 wine "$exe" || status=$?
 # COM registrations reach system.reg only when wineserver shuts down.
 wineserver -w
 cat "$log"
 [ "$status" -eq 0 ] || { echo "install mode exited with $status"; exit 1; }
-
-echo '--- extraction mode, for the files install mode should have placed'
-expected=$(mktemp -d)
-wine "$exe" "$(winepath -w "$expected")"
-cat "$log"
-
-echo '--- checks'
 
 grep -q 'LoadLibraryExW("dismapi.dll") -> error' "$log" ||
     { echo 'install mode did not take the extraction route'; exit 1; }
