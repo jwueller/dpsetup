@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.31)
 
 project("dpsetup"
-    VERSION 2.48.0
+    VERSION 2.49.0
     LANGUAGES CXX RC
     DESCRIPTION "Standalone DirectPlay prerequisite setup"
     HOMEPAGE_URL "https://github.com/jwueller/dpsetup"
