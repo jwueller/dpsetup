@@ -7,6 +7,7 @@ on:
 
 jobs:
   build:
+    name: Build and test extraction mode
     runs-on: windows-2025
     steps:
       - uses: actions/checkout@v5
@@ -35,7 +36,8 @@ jobs:
           if ($p.ExitCode -ne 0) { throw "dpsetup.exe exited with $($p.ExitCode)" }
 
       # Unarchived, so the release zip is the artifact rather than a zip
-      # inside the zip that an artifact otherwise is.
+      # inside the zip that an artifact otherwise is. download-artifact
+      # unpacks it again.
       - uses: actions/upload-artifact@v7
         with:
           path: ${{ env.ZIP }}
@@ -44,6 +46,7 @@ jobs:
   # The hosted runners are disposable, already elevated, and ship with the
   # DirectPlay feature disabled, so install mode runs for real here.
   install-windows:
+    name: Test install mode (${{ matrix.os }})
     needs: build
     strategy:
       fail-fast: false
@@ -55,18 +58,14 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           path: ${{ runner.temp }}/artifact
-      - name: Unpack
-        shell: pwsh
-        run: |
-          $zip = Get-ChildItem $env:RUNNER_TEMP/artifact -Recurse -Filter dpsetup-*.zip
-          Expand-Archive $zip.FullName -DestinationPath $env:RUNNER_TEMP/dist
-          $exe = Get-ChildItem $env:RUNNER_TEMP/dist -Recurse -Filter dpsetup.exe
-          "EXE=$($exe.FullName)" >> $env:GITHUB_ENV
       - name: Test install mode
         shell: pwsh
-        run: ./tests/windows-install.ps1 -Exe $env:EXE
+        run: |
+          $exe = Get-ChildItem $env:RUNNER_TEMP/artifact -Recurse -Filter dpsetup.exe
+          ./tests/windows-install.ps1 -Exe $exe.FullName
 
   install-wine:
+    name: Test install mode (Wine)
     needs: build
     runs-on: ubuntu-24.04
     env:
@@ -82,10 +81,8 @@ jobs:
           sudo dpkg --add-architecture i386
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends wine wine32:i386 wine64
-      - name: Unpack
-        run: |
-          unzip -q "$(find "$RUNNER_TEMP/artifact" -name 'dpsetup-*.zip')" -d "$RUNNER_TEMP/dist"
-          echo "EXE=$(find "$RUNNER_TEMP/dist" -name dpsetup.exe)" >> "$GITHUB_ENV"
+      - name: Find the exe
+        run: echo "EXE=$(find "$RUNNER_TEMP/artifact" -name dpsetup.exe)" >> "$GITHUB_ENV"
       # In the default prefix, which the install test never touches.
       - name: Extract the expected files
         run: |
