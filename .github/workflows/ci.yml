@@ -76,7 +76,7 @@ jobs:
 
   # The hosted runners are disposable, already elevated, and ship with the
   # DirectPlay feature disabled, so install mode runs for real here.
-  install-windows:
+  test-installation-windows:
     name: Test installation (${{ matrix.os }})
     needs: build
     strategy:
@@ -95,7 +95,7 @@ jobs:
           $exe = Get-ChildItem $env:RUNNER_TEMP/artifact -Recurse -Filter dpsetup.exe
           ./tests/install-windows.ps1 -Exe $exe.FullName
 
-  install-wine:
+  test-installation-wine:
     name: Test installation (Wine)
     needs: build
     runs-on: ubuntu-24.04
@@ -128,7 +128,7 @@ jobs:
 
   # The latest GE-Proton, since Valve publishes no Proton binaries outside
   # Steam and UMU-Proton (closer to Valve's) lags a major version.
-  install-proton:
+  test-installation-proton:
     name: Test installation (Proton)
     needs: build
     runs-on: ubuntu-24.04
