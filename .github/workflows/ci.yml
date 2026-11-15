@@ -99,7 +99,6 @@ jobs:
 
   # The latest GE-Proton, since Valve publishes no Proton binaries outside
   # Steam and UMU-Proton (closer to Valve's) lags a major version.
-  # Unpinned, so a new Proton that breaks dpsetup fails CI.
   install-proton:
     name: Test installation (Proton)
     needs: build
