@@ -41,19 +41,26 @@ $before = Get-FeatureState
 if ($before -ne 'Disabled') { throw 'DirectPlay is not disabled beforehand, so this run proves nothing' }
 foreach ($name in $classes.Keys) { "$name before: $(Test-ComClass $classes[$name])" }
 
+# Each run is checked on its own, so the second cannot stand in for a first
+# run that left the feature off.
+function Assert-Installed([string] $When) {
+    $state = Get-FeatureState
+    "DirectPlay $When`: $state"
+    "RebootPending $When`: $(Test-RebootPending)"
+    if ($state -eq 'EnablePending') {
+        'The feature waits for a restart, so the COM classes cannot be checked'
+        return
+    }
+    if ($state -ne 'Enabled') { throw "DirectPlay is $state $When" }
+    foreach ($name in $classes.Keys) {
+        if (-not (Test-ComClass $classes[$name])) { throw "$name cannot be created $When" }
+        "$name $When`: True"
+    }
+}
+
 Invoke-Install
+Assert-Installed 'after the first run'
+
 # A second run finds the feature enabled and must still succeed.
 Invoke-Install
-
-$after = Get-FeatureState
-"DirectPlay after: $after"
-"RebootPending after: $(Test-RebootPending)"
-if ($after -eq 'EnablePending') {
-    'The feature waits for a restart, so the COM classes cannot be checked'
-    exit 0
-}
-if ($after -ne 'Enabled') { throw "DirectPlay is $after afterwards" }
-foreach ($name in $classes.Keys) {
-    if (-not (Test-ComClass $classes[$name])) { throw "$name cannot be created afterwards" }
-    "$name after: True"
-}
+Assert-Installed 'after the second run'
