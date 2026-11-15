@@ -22,10 +22,12 @@ static const struct
     const char* dll;
     const wchar_t* clsid;
 } kClasses[] = {
-    {"dplayx.dll", L"{D1EB6D20-8923-11D0-9D97-00A0C90A43CB}"},
-    {"dpnet.dll", L"{286F484D-375E-4458-A272-B138E2F80A6A}"},
+    // @formatter:off
+    {"dplayx.dll",   L"{D1EB6D20-8923-11D0-9D97-00A0C90A43CB}"},
+    {"dpnet.dll",    L"{286F484D-375E-4458-A272-B138E2F80A6A}"},
     {"dpnhupnp.dll", L"{B9C2E9C4-68C1-4D42-A7A1-E76A26982AD6}"},
     {"dpnhpast.dll", L"{963AB779-16A1-477C-A36D-CB5E711938F7}"},
+    // @formatter:on
 };
 
 int main(void)

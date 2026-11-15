@@ -58,7 +58,7 @@ run "$checker" || true
 echo
 sed 's/^/  /' "$report"
 echo
-[ "$(tail -n 1 "$report")" = 'all native' ] ||
+[ "$(tail -n 1 "$report" | tr -d '\r')" = 'all native' ] ||
     { echo 'DirectPlay classes are not served by the native DLLs'; exit 1; }
 
 echo 'Prefix checks passed'
