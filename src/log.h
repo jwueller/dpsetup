@@ -1,8 +1,8 @@
 #pragma once
 
 /// @file
-/// The run's record: one UTF-8 line per message in a file next to the exe,
-/// and the same line on the parent console when there is one.
+/// The run's record: UTF-8 messages in a file, and the same messages on the
+/// parent console when there is one.
 
 // Declares std::format, which only LOG's expansion uses.
 // ReSharper disable once CppUnusedIncludeDirective
@@ -15,9 +15,10 @@
 /// the console only.
 void LogOpen(const std::wstring& path) noexcept;
 
-/// Writes one record: UTC timestamp, @p message. A line break inside
-/// @p message becomes a space so a record stays one line. A record says on its
-/// own whether something failed.
+/// Writes @p message and a line break. Line breaks inside it are kept, as
+/// CRLF. There are no timestamps: the run writes the time once when it
+/// starts, and a step whose duration matters logs that itself. A message says
+/// on its own whether something failed.
 void LogWrite(std::string_view message) noexcept;
 
 /// `LOG("fmt {}", args...)`: @ref LogWrite of `std::format`. The arguments are

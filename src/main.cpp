@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <span>
 #include <string>
 #include <string_view>
@@ -503,7 +504,13 @@ int WINAPI wWinMain(
     const auto options = ParseCommandLine(args, exeDir + L"\\dpsetup.log");
     LogOpen(options.logPath);
 
-    LOG("{} v{}", PROJECT_MODULE, PROJECT_VERSION);
+    LOG(
+        "{:%FT%TZ}",
+        std::chrono::floor<std::chrono::seconds>(
+            std::chrono::system_clock::now()
+        )
+    );
+    LOG("{}", PROJECT_NOTICE);
     LOG("> {}", Utf8FromWide(GetCommandLineW()));
 
     if (options.command == Command::Help)

@@ -142,16 +142,25 @@ constexpr LPCSTR NameFromFeatureState(
 
 ScopedModule LoadDismApi()
 {
+    constexpr auto kDismApiFileName = L"dismapi.dll";
+
     ScopedModule dismApi(
-        LoadLibraryExW(L"dismapi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32)
+        LoadLibraryExW(kDismApiFileName, nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32)
     );
     if (dismApi)
     {
-        LOG("LoadLibraryExW(\"dismapi.dll\") -> ok");
+        LOG(
+            "LoadLibraryExW({:?}) -> ok",
+            Utf8FromWide(kDismApiFileName)
+        );
     }
     else
     {
-        LOG("LoadLibraryExW(\"dismapi.dll\") -> error {}", GetLastError());
+        LOG(
+            "LoadLibraryExW({:?}) -> error {}",
+            Utf8FromWide(kDismApiFileName),
+            GetLastError()
+        );
     }
     return dismApi;
 }
@@ -230,6 +239,7 @@ bool EnableDirectPlayFeature(const HMODULE hDismApi)
         // (2026-11-12, Windows 11 26300); Microsoft documents the
         // HRESULT_FROM_WIN32 form, which is a failure code. The state read
         // back below decides. The API never restarts the machine itself.
+        const ULONGLONG enableStart = GetTickCount64();
         hr = pfnDismEnableFeature(
             session,
             L"DirectPlay",
@@ -244,6 +254,11 @@ bool EnableDirectPlayFeature(const HMODULE hDismApi)
             nullptr
         );
         logDismCall("DismEnableFeature", hr);
+        // It can take minutes: this tells a slow run from a stuck one.
+        LOG(
+            "DismEnableFeature took {} ms",
+            GetTickCount64() - enableStart
+        );
 
         DismFeatureInfo* pFeatureInfo = nullptr;
         hr = pfnDismGetFeatureInfo(

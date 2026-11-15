@@ -55,21 +55,14 @@ void LogWrite(const std::string_view message) noexcept
 
     try
     {
-        SYSTEMTIME now;
-        GetSystemTime(&now);
-
-        std::string line = std::format(
-            "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:03}Z ",
-            now.wYear,
-            now.wMonth,
-            now.wDay,
-            now.wHour,
-            now.wMinute,
-            now.wSecond,
-            now.wMilliseconds
-        );
+        std::string line;
         for (const char ch : message)
-            line.push_back(ch == '\r' || ch == '\n' ? ' ' : ch);
+        {
+            if (ch == '\n')
+                line += "\r\n";
+            else if (ch != '\r')
+                line.push_back(ch);
+        }
 
         if (g_hConsole != INVALID_HANDLE_VALUE)
         {
