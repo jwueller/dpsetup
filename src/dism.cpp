@@ -6,7 +6,7 @@
 #include "encoding.h"
 #include "log.h"
 #include "proc_address.h"
-#include "unique_resource.h"
+#include "scoped_resource.h"
 
 #include "steps.h"
 
@@ -140,9 +140,9 @@ constexpr LPCSTR NameFromFeatureState(
 }
 } // namespace
 
-UniqueModule LoadDismApi()
+ScopedModule LoadDismApi()
 {
-    UniqueModule dismApi(
+    ScopedModule dismApi(
         LoadLibraryExW(L"dismapi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32)
     );
     if (dismApi)

@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <string>
 
-#include "unique_resource.h"
+#include "scoped_resource.h"
 
 /**
  * @brief Outcome of an extraction attempt, distinguishing an environment
@@ -84,7 +84,7 @@ void PreferExtractedDirectPlay(const std::wstring& sysDir);
  *  a `dism.exe` stand-in that prints nothing and exits 0, which is why the
  *  executable is no marker).
  */
-[[nodiscard]] UniqueModule LoadDismApi();
+[[nodiscard]] ScopedModule LoadDismApi();
 
 /**
  * @brief Windows path: DirectPlay is an off-by-default optional feature,

@@ -19,7 +19,7 @@
 
 #include "encoding.h"
 #include "log.h"
-#include "unique_resource.h"
+#include "scoped_resource.h"
 
 #include "steps.h"
 
@@ -528,7 +528,7 @@ ExtractResult ExtractDirectPlayFiles(
         FILE_ATTRIBUTE_NORMAL,
         nullptr
     );
-    const UniqueHandle hCab(hCabFile);
+    const ScopedHandle hCab(hCabFile);
     if (!hCab)
     {
         const DWORD error = GetLastError();

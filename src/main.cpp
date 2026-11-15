@@ -9,7 +9,7 @@
 
 #include "encoding.h"
 #include "log.h"
-#include "unique_resource.h"
+#include "scoped_resource.h"
 #include "meta.h"
 
 #include "steps.h"
@@ -62,7 +62,7 @@ namespace
     HANDLE hToken = nullptr;
     if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
         return false;
-    const UniqueHandle token(hToken);
+    const ScopedHandle token(hToken);
 
     TOKEN_ELEVATION elevation{};
     DWORD cbReturned = 0;
@@ -121,7 +121,7 @@ namespace
         return true;
     }
 
-    const UniqueHandle child(info.hProcess);
+    const ScopedHandle child(info.hProcess);
     LOG("not elevated: relaunched elevated, waiting");
     WaitForSingleObject(child.Get(), INFINITE);
 
@@ -152,7 +152,7 @@ namespace
     const std::wstring_view systemDirectory{sysDir, n};
     LOG("GetSystemDirectoryW -> {:?}", Utf8FromWide(systemDirectory));
 
-    if (const UniqueModule dismApi = LoadDismApi())
+    if (const ScopedModule dismApi = LoadDismApi())
     {
         const bool ok = EnableDirectPlayFeature(dismApi.Get());
         LOG(
@@ -244,7 +244,7 @@ int WINAPI wWinMain(
 
     int argc = 0;
     LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-    const UniqueLocal argvOwner(argv);
+    const ScopedLocal argvOwner(argv);
     // A missing/unparsable command line falls back to install mode (argc <= 1).
     const bool extractionMode = argv && argc > 1;
     const std::wstring targetDir =

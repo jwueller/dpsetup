@@ -14,7 +14,7 @@
  * discards its result, whatever it returns.
  */
 template <typename T, auto fnClose>
-class UniqueResource
+class ScopedResource
 {
     T m_value{};
 
@@ -27,20 +27,20 @@ class UniqueResource
     }
 
 public:
-    explicit UniqueResource(const T value = {}) noexcept :
+    explicit ScopedResource(const T value = {}) noexcept :
         m_value(value)
     {
     }
 
-    UniqueResource(const UniqueResource& other) = delete;
-    UniqueResource& operator=(const UniqueResource& other) = delete;
+    ScopedResource(const ScopedResource& other) = delete;
+    ScopedResource& operator=(const ScopedResource& other) = delete;
 
-    UniqueResource(UniqueResource&& other) noexcept :
+    ScopedResource(ScopedResource&& other) noexcept :
         m_value(other.Release())
     {
     }
 
-    UniqueResource& operator=(UniqueResource&& other) noexcept
+    ScopedResource& operator=(ScopedResource&& other) noexcept
     {
         if (this != &other)
             Reset(other.Release());
@@ -48,7 +48,7 @@ public:
         return *this;
     }
 
-    ~UniqueResource() noexcept
+    ~ScopedResource() noexcept
     {
         Reset();
     }
@@ -82,7 +82,7 @@ public:
     }
 };
 
-using UniqueHandle = UniqueResource<HANDLE, &CloseHandle>;
-using UniqueModule = UniqueResource<HMODULE, &FreeLibrary>;
-using UniqueKey = UniqueResource<HKEY, &RegCloseKey>;
-using UniqueLocal = UniqueResource<HLOCAL, &LocalFree>;
+using ScopedHandle = ScopedResource<HANDLE, &CloseHandle>;
+using ScopedModule = ScopedResource<HMODULE, &FreeLibrary>;
+using ScopedKey = ScopedResource<HKEY, &RegCloseKey>;
+using ScopedLocal = ScopedResource<HLOCAL, &LocalFree>;

@@ -11,7 +11,7 @@
 #include "encoding.h"
 #include "log.h"
 #include "proc_address.h"
-#include "unique_resource.h"
+#include "scoped_resource.h"
 
 #include "steps.h"
 
@@ -122,8 +122,8 @@ bool UnixRemoveEntry(const std::wstring& dir, const std::wstring& fileName)
         return false;
     }
     {
-        const UniqueHandle process(pi.hProcess);
-        const UniqueHandle thread(pi.hThread);
+        const ScopedHandle process(pi.hProcess);
+        const ScopedHandle thread(pi.hThread);
         WaitForSingleObject(process.Get(), MillisecondsFrom(5s));
     }
 
@@ -148,7 +148,7 @@ namespace
 {
 void ApplyWineDllOverrides()
 {
-    UniqueKey key;
+    ScopedKey key;
     constexpr auto lpSubKey = L"Software\\Wine\\DllOverrides";
     const LSTATUS lStatus = RegCreateKeyExW(
         HKEY_CURRENT_USER,
@@ -212,7 +212,7 @@ void RegisterWineComServers(const std::wstring& destDir)
             nullptr,
             LOAD_WITH_ALTERED_SEARCH_PATH
         );
-        const UniqueModule library(hLibrary);
+        const ScopedModule library(hLibrary);
         if (!library)
         {
             LOG(

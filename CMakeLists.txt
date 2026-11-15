@@ -168,7 +168,7 @@ add_executable(${PROJECT_MODULE} WIN32
     "src/encoding.h"
     "src/log.h"
     "src/proc_address.h"
-    "src/unique_resource.h"
+    "src/scoped_resource.h"
 )
 
 # Static CRT: Games may run this before any vcredist is guaranteed to be present.
