@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The version string counts commits, so the history must be complete.
+          fetch-depth: 0
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86
+
+      - name: Build
+        run: |
+          cmake --preset release
+          cmake --build out/build/release
+
+      - name: Extraction mode
+        shell: pwsh
+        run: |
+          $exe = Get-Item out/build/release/dist/dpsetup-*/redistributable/dpsetup.exe
+          $target = Join-Path $env:RUNNER_TEMP extracted
+          $p = Start-Process $exe.FullName -ArgumentList "`"$target`"" -Wait -PassThru -NoNewWindow
+          Get-Content (Join-Path $exe.DirectoryName dpsetup.log)
+          Get-ChildItem $target
+          if ($p.ExitCode -ne 0) { throw "dpsetup.exe exited with $($p.ExitCode)" }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dpsetup
+          path: out/build/release/dpsetup-*.zip
+
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025, windows-11-arm]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Probe DirectPlay availability
+        shell: pwsh
+        run: |
+          $os = Get-CimInstance Win32_OperatingSystem
+          "$($os.Caption) $($os.Version) $($os.OSArchitecture)"
+          "Elevated: $(([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))"
+          foreach ($f in 'System32\dismapi.dll', 'SysWOW64\dplayx.dll', 'SysWOW64\dpnet.dll') {
+            "$f exists: $(Test-Path (Join-Path $env:windir $f))"
+          }
+          dism /online /get-featureinfo /featurename:DirectPlay
+          dism /online /get-featureinfo /featurename:LegacyComponents
+          Get-WindowsOptionalFeature -Online |
+            Where-Object FeatureName -Match 'DirectPlay|Legacy' |
+            Format-Table FeatureName, State
